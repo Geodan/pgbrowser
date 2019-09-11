@@ -1,7 +1,7 @@
-# PGServer
+# PGBrowser
 *Work in progress, many/some features still missing!*
 
-Another PostGIS http API server  
+Another PostGIS http API browser and server  
 Upload and download geo-data, preview, filter  
 Serve cached mapbox vector tiles (mvt), geojson, geobuf
 
