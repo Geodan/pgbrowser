@@ -12,7 +12,7 @@ Built on [Node Express](https://expressjs.com/)
 * [Node and npm](https://nodejs.org/en/download/)
 
 ## Installation
-If you don't have git, you can donwload [a zip file](https://github.com/anneb/pgserver/archive/master.zip) of the project instead.
+If you don't have git, you can donwload [a zip file](https://github.com/geodan/pgbrowser/archive/master.zip) of the project instead.
 
      git clone this_repository
      cd this_repository
