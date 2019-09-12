@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const ogr2ogr = require('ogr2ogr');
+//const ogr2ogr = require('ogr2ogr');
 const path = require('path');
 const { exec } = require('child_process');
 
@@ -26,7 +26,53 @@ module.exports = function(app, pool) {
       })
     })
   }
+
   
+  function unzip(fileName, tempDir) {
+    return new Promise((resolve, reject)=>{
+      exec (`unzip -qq -d "${tempDir}" "${fileName}"`, (err, stdout, stderr)=>{
+        if (err) {
+          rmr(tempDir).catch(err=>{}).finally(()=>{
+            reject('failed to unzip');
+          });
+        } else {
+          try {
+            fs.unlinkSync(fileName);
+            fs.renameSync(tempDir, fileName);  
+          } catch (err) {
+            reject(`failed to mv zip files to directory: ${err.message}`);
+            return;
+          } finally {
+            resolve()
+          }
+        }
+      })
+    })
+  }
+
+  function untar(fileName, tempDir) {
+    fs.mkdirSync(tempDir);
+    return new Promise((resolve, reject)=>{
+      exec(`tar --directory "${tempDir}" -xf "${fileName}"`, (err, stdout, stderr)=>{
+        if (err) {
+          rmr(tempDir).catch(err=>{}).finally(()=>{
+            reject('failed to untar');
+          });
+        } else {
+          try {
+            fs.unlinkSync(fileName);
+            fs.renameSync(tempDir, fileName);  
+          } catch (err) {
+            reject(`failed to mv zip files to directory: ${err.message}`);
+            return;
+          } finally {
+            resolve()
+          }
+        }
+      })
+    })
+  }
+
   async function unArchiveFile(fileName) {
     let parsedPath = path.parse(fileName);
     let tempDir = `${__dirname}/temp/${parsedPath.base}`;
@@ -35,31 +81,22 @@ module.exports = function(app, pool) {
     } catch (err) {
       // ignore
     }
-    return new Promise((resolve, reject)=>{
-      exec (`unzip -d "${tempDir}" "${fileName}"`, (err, stdout, stderr)=>{
-        if (err) {
-          reject('failed to execute unzip');
-          return;
-        }
-        console.log(`${stdout}`);
-        console.log(`${stderr}`);
-        try {
-          fs.unlinkSync(fileName);
-          fs.renameSync(tempDir, fileName);  
-        } catch (err) {
-          reject(`failed to mv zip files to directory: ${err.message}`);
-          return;
-        }
-        resolve()
-      })
-    })
+    try {
+      await unzip (fileName, tempDir)
+    } catch(err) {
+      try {
+        await untar(fileName, tempDir);
+      } catch(err) {
+
+      }
+    } 
   }
 
 
   app.post('/admin/upload', async (req, res) => {
     let uploadFile = req.files.uploadfile;
     const fileName = uploadFile.name;
-    if (!fileName || fileName === "" ) {
+    if (!fileName || fileName === "" || fileName.toLowerCase().trim() === ".gitignore" ) {
       return res.json({file: "none"});
     }
     let dest = `${__dirname}/admin/files/${fileName}`;
@@ -95,15 +132,21 @@ module.exports = function(app, pool) {
   })
   
   app.delete('/admin/upload', express.json({type: '*/*'}), (req, res) => {
-      fs.unlinkSync(`${__dirname}/admin/files/${req.body.file}`);
-      res.json({
-          file: 'done'
-      });
+      //fs.unlinkSync(`${__dirname}/admin/files/${req.body.file}`);
+      rmr(`${__dirname}/admin/files/${req.body.file}`).then(err=>{
+        if (err){
+          res.json({error: err.message});
+        } else {
+          res.json({
+            file: 'done'
+          });
+        }
+      })
   });
 
 
   function listFiles(dirname) {
-    let files = fs.readdirSync(dirname);
+    let files = fs.readdirSync(dirname).filter(file=>file !== '.gitignore');
     files = files.map(file=>{
       let stat = fs.statSync(path.join(dirname, file));
       let result = {
@@ -119,22 +162,42 @@ module.exports = function(app, pool) {
         uid: stat.uid,
         gid: stat.gid
       }
-      if (result.dir) {
-        result.files = listFiles(path.join(dirname, result.name));
-      }
       return result;
     })
     return files;
   }
 
   app.get('/admin/list', (req, res)=>{
-    let files = listFiles(`${__dirname}/admin/files`);
+    let subdir = (req.query.subdir?`/${req.query.subdir}`:''); // todo: sanitize 
+    let files = listFiles(`${__dirname}/admin/files${subdir}`);
     res.json(files);
   })
+
+  function ogr2ogr(fileName, tableName, pool) {
+    return new Promise((resolve, reject)=>{
+      exec (`ogr2ogr -f "PostgreSQL" PG:"host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432}" -nlt PROMOTE_TO_MULTI -overwrite -lco GEOMETRY_NAME=geom -nln ${tableName} "${fileName}"`, (err, stdout, stderr)=>{
+        if (err) {
+            reject(err.message);
+        } else {
+            resolve({stdout: stdout, stderr: stderr});
+        }
+      })
+    })
+  }
 
   app.get('/admin/import', (req, res)=>{
     let tablename = path.parse(req.query.file).name.toLowerCase();
     tablename = tablename.replace(/\./g, '_').replace(/ /g, '_');
+    let fileName = `${__dirname}/admin/files/${req.query.file}`;
+    ogr2ogr(fileName, tablename, pool)
+      .then((io)=>{
+        res.json({result: "ok", io: io});
+      })
+      .catch((err)=> {
+        res.json({error: err});
+      });
+    
+    /*
     ogr2ogr(`${__dirname}/admin/files/${req.query.file}`)
     .format('PostgreSQL')
         .destination(`PG:host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432}`)
@@ -145,6 +208,6 @@ module.exports = function(app, pool) {
               return;
             }
             res.json({result: "ok"});
-        })
+        })*/
   })
 }

@@ -1,7 +1,9 @@
 {
     "host": "host.example.com",
-    "user": "dbuser",
-    "password": "dbpassword",
+    "user": "readonly-dbuser",
+    "password": "readonly-dbuser-password",
+    "adminuser": "write-dbuser",
+    "adminpassword": "write-dbuser-password",
     "database": "dbname",
     "ssl": true,
     "port": 5432,

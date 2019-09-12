@@ -84,7 +84,7 @@
         const attrType = urlParams.get("columntype");
         const geomType = urlParams.get('geomtype');
         const geomColumn = urlParams.get('geom_column');
-        document.querySelector('#tablename').innerHTML = `Layer: ${fullTableName}<br>Geometry: ${geomColumn} (${geomType})`;
+        document.querySelector('#tablename').innerHTML = `Table: ${fullTableName}<br>Geometry: ${geomColumn} (${geomType})`;
         document.querySelector('#columnname').innerHTML = `Attribute: ${attrName} (${attrType})`;
         document.querySelector('#back').innerHTML = `<a href="tableinfo.html?table=${fullTableName}&geom_column=${geomColumn}">Back to layer info</a>`;
         document.querySelectorAll('[name="colorscheme"]').forEach(radio=>radio.onchange=updateLegendColorSchemes);
