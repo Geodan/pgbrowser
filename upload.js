@@ -10,6 +10,48 @@ module.exports = function(app, pool) {
   if (!app) {
     return;
   }
+
+  let schemaInfo = {schemas:[],searchpath:""};
+  function setDefaultSchema() {
+    if (schemaInfo.schemas.length && schemaInfo.searchpath) {
+      schemaInfo.searchpath = schemaInfo.searchpath.split(',').map(schema=>{
+        schema.trim();
+        if (schema === '"$user"') {
+          schema = pool.$cn.user
+        }
+        return schema;
+      });
+      schemaInfo.default = schemaInfo.searchpath.reduce((result, schema)=>{
+        if (result) {
+          return result;
+        }
+        if (schemaInfo.schemas.includes(schema)) {
+          return schema;
+        }
+        return null;
+      },null);
+      console.log(`database: ${pool.$cn.database}, default_schema: ${schemaInfo.default}, search_path: ${schemaInfo.searchpath.join(',')}`);
+    }
+  }
+
+  function getSchemaInfo() {
+    if (schemaInfo.searchpath) {
+      return;
+    }
+    return Promise.all([
+      pool.any("SELECT schema_name FROM information_schema.schemata", []).then(result=>{
+        schemaInfo.schemas = result.map(row=>row.schema_name);
+      }),
+      pool.one("show search_path",[]).then(result=>{
+        schemaInfo.searchpath = result.search_path;        
+      })
+    ])
+    .then(()=>setDefaultSchema())
+    .catch(err=>{})
+  }
+
+  getSchemaInfo();
+
   app.use(fileUpload({
     useTempFiles: true,
     tempFileDir : `${__dirname}/temp/`
@@ -173,9 +215,9 @@ module.exports = function(app, pool) {
     res.json(files);
   })
 
-  function ogr2ogr(fileName, tableName, pool) {
+  function ogr2ogr(fileName, schemaName, tableName, pool) {
     return new Promise((resolve, reject)=>{
-      exec (`ogr2ogr -f "PostgreSQL" PG:"host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432}" -nlt PROMOTE_TO_MULTI -overwrite -lco GEOMETRY_NAME=geom -nln ${tableName} "${fileName}"`, (err, stdout, stderr)=>{
+      exec (`ogr2ogr -f "PostgreSQL" PG:"host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432}" -nlt PROMOTE_TO_MULTI -overwrite -lco GEOMETRY_NAME=geom -nln ${schemaName}.${tableName} "${fileName}"`, (err, stdout, stderr)=>{
         if (err) {
             reject(err.message);
         } else {
@@ -185,16 +227,34 @@ module.exports = function(app, pool) {
     })
   }
 
+  let importBusyMessage = null;
+
   app.get('/admin/import', (req, res)=>{
-    let tablename = path.parse(req.query.file).name.toLowerCase();
-    tablename = tablename.replace(/\./g, '_').replace(/ /g, '_');
+    if (!schemaInfo.default) {
+      res.json({error: 'database not connected, try again later'});
+      getSchemaInfo();
+      return;
+    }
+    if (importBusyMessage) {
+      res.json({error: `only one concurrent import allowed, try again later (${importBusyMessage})`});
+      return;
+    }
+    let schemaName = req.query.schema ? req.query.schema : schemaInfo.default;
+    schemaName = schemaName.toLowerCase().trim().replace(/\./g, '_'.replace(/ /g,'_'));
+    let tableName = path.parse(req.query.file).name.toLowerCase();
+    tableName = tableName.replace(/\./g, '_').replace(/ /g, '_');
     let fileName = `${__dirname}/admin/files/${req.query.file}`;
-    ogr2ogr(fileName, tablename, pool)
+    importBusyMessage = `import ${req.query.file} to ${schemaName}.${tableName}`;
+    ogr2ogr(fileName, schemaName, tableName, pool)
       .then((io)=>{
-        res.json({result: "ok", io: io});
+        res.json({result: "ok", table: `${schemaName}.${tableName}`, io: io});
+        rmr(`${__dirname}/cache/${pool.$cn.database}/${schemaName}.${tableName}`).catch(err=>{});
       })
       .catch((err)=> {
         res.json({error: err});
+      })
+      .finally(()=> {
+        importBusyMessage = null;
       });
     
     /*

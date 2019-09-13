@@ -112,8 +112,18 @@
 
     function importFile(filename) {
         let importersult = document.querySelector('#importresult');
-        importersult.innerHTML = `Importing ${filename} ...`;
+        const startTime = new Date();
+        let loop = true;
+        function updateElapsedTime() {
+            if (loop) {
+                const secondsElapsed = Math.round((new Date() - startTime) / 1000);
+                importersult.innerHTML = `Importing ${filename} ... (${secondsElapsed})`;            
+                setTimeout(updateElapsedTime, 1000);
+            }
+        }
+        updateElapsedTime();
         fetch(`import?file=${filename}`).then(response=>{
+            loop = false;
             if (!response.ok) {
                 importersult.innerHTML = response.responseText;
                 return;
