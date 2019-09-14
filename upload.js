@@ -229,6 +229,14 @@ module.exports = function(app, pool) {
 
   let importBusyMessage = null;
 
+  async function autoCleanUp(schemaName, tableName, geometryName) {
+    sql = "update $(schemaName:name).$(tableName:name) set $(geometryName:name)=st_makevalid($(geometryName:name)) where not st_isvalid($(geometryName:name))"
+    await pool.none(sql, {schemaName: schemaName, tableName: tableName ,geometryName: geometryName});
+    sql = "update $(schemaName:name).$(tableName:name) set $(geometryName:name)=st_intersection(st_makevalid($(geometryName:name)), st_makevalid(st_geomfromtext('POLYGON((-180 -89,-180 -63.2,180 -63.2,180 -89,-180 -89))', 4326))) where st_intersects($(geometryName:name), st_makevalid(st_geomfromtext('POLYGON((-180 -89, -180 -90, 180 -90, 180 -89, -180 -89))', 4326)))"
+    await pool.none(sql, {schemaName: schemaName, tableName: tableName ,geometryName: geometryName});
+    return;
+  }
+
   app.get('/admin/import', (req, res)=>{
     if (!schemaInfo.default) {
       res.json({error: 'database not connected, try again later'});
@@ -248,6 +256,7 @@ module.exports = function(app, pool) {
     ogr2ogr(fileName, schemaName, tableName, pool)
       .then((io)=>{
         res.json({result: "ok", table: `${schemaName}.${tableName}`, io: io});
+        autoCleanUp(schemaName, tableName, 'geom');
         rmr(`${__dirname}/cache/${pool.$cn.database}/${schemaName}.${tableName}`).catch(err=>{});
       })
       .catch((err)=> {
