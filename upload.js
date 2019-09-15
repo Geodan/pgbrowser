@@ -264,19 +264,41 @@ module.exports = function(app, pool) {
       })
       .finally(()=> {
         importBusyMessage = null;
-      });
-    
-    /*
-    ogr2ogr(`${__dirname}/admin/files/${req.query.file}`)
-    .format('PostgreSQL')
-        .destination(`PG:host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432}`)
-        .options(['-nlt', 'PROMOTE_TO_MULTI', '-overwrite', '-lco', 'GEOMETRY_NAME=geom', '-nln', tablename])
-        .exec((err, data) => {
-            if (err) {
-              res.json({error: err.message});
-              return;
-            }
-            res.json({result: "ok"});
-        })*/
+        tableStats(pool, tableName, schemaName)
+      });    
   })
+}
+
+async function tableStats(pool, fullTableName, defaultSchema) {
+  let parts = fullTableName.split('.');
+  let tableName = parts[parts.length - 1];
+  let schemaName = parts.length > 1 ? parts[0] : defaultSchema ? defaultSchema : 'public';
+  const sql = `
+    SELECT 
+      attname as field_name,
+      typname as field_type
+    FROM 
+      pg_namespace, pg_attribute, pg_type, pg_class
+    WHERE
+      pg_type.oid = atttypid AND
+      pg_class.oid = attrelid AND
+      relnamespace = pg_namespace.oid AND
+      attnum >= 1 AND
+      relname = $(tableName) AND
+      nspname = $(schemaName)
+    `
+  console.log(sql);
+  let fieldInfo = await pool.any(sql, {tableName: tableName, schemaName: schemaName});
+  let sql2 = `
+    SELECT
+      count(*)::integer, ${fieldInfo.filter(row=>row.field_type!=='geometry').map(row=>{
+        let nm = row.field_name;
+        return `min("${nm}") "${nm}_min", max("${nm}") "${nm}_max", count("${nm}")::integer "${nm}_count", count(distinct "${nm}")::integer "${nm}_dcount"`
+      }).join(',')}
+    FROM
+      ${fullTableName}
+  `;
+  console.log(sql2);
+  let tableStats = await pool.any(sql2, []);
+  console.log(JSON.stringify(tableStats));
 }

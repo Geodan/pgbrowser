@@ -34,6 +34,8 @@
         const fullTableName = urlParams.get('table');
         const geomType = urlParams.get('geomtype');
         const geomcolumn = urlParams.get('geom_column');
+        let cleanupLink = document.querySelector('#cleanup');
+        cleanupLink.setAttribute('href', 'admin/cleanup.html?table=' + fullTableName);
         let bboxll = null;
         document.querySelector('#tablename').innerHTML = `Table: ${fullTableName}<br>Geometry: ${geomcolumn} (${geomType})`;
         const parts = fullTableName.split('.');
@@ -88,6 +90,7 @@
     <h2 id="tablename"></h2>
     <div id="bbox">waiting for table stats...</div>
     <ul id="columns"></ul>
+    <a id="cleanup" href="#">clean up</a><br>
     <a href="info.html">Back to layer overview</a>
 </body>
 </html>
