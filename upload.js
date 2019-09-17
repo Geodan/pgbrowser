@@ -221,9 +221,9 @@ module.exports = function(app, pool) {
     return new Promise((resolve, reject)=>{
       exec (`ogr2ogr -f "PostgreSQL" PG:"host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432} sslmode=${pool.$cn.ssl?'require':'allow'}" -nlt PROMOTE_TO_MULTI -overwrite -lco GEOMETRY_NAME=geom -nln ${schemaName}.${tableName} "${fileName}"`, (err, stdout, stderr)=>{
         if (err) {
-            reject(err.message);
+            reject(err.message.replace(/password=[^\s]*/g, 'password=xxxx'));
         } else {
-            resolve({stdout: stdout, stderr: stderr});
+            resolve({stdout: stdout.replace(/password=[^\s]*/g, 'password=xxxx'), stderr: stderr.replace(/password=[^\s]*/g, 'password=xxxx')});
         }
       })
     })
