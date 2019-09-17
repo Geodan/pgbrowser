@@ -15,7 +15,7 @@ module.exports = function(app, pool) {
   function setDefaultSchema() {
     if (schemaInfo.schemas.length && schemaInfo.searchpath) {
       schemaInfo.searchpath = schemaInfo.searchpath.split(',').map(schema=>{
-        schema.trim();
+        schema = schema.trim();
         if (schema === '"$user"') {
           schema = pool.$cn.user
         }
@@ -31,6 +31,8 @@ module.exports = function(app, pool) {
         return null;
       },null);
       console.log(`database: ${pool.$cn.database}, default_schema: ${schemaInfo.default}, search_path: ${schemaInfo.searchpath.join(',')}`);
+    } else {
+      console.log(`database: ${pool.$cn.database}, failed to set default schema`)
     }
   }
 
