@@ -6,7 +6,7 @@ const { exec } = require('child_process');
 
 const fileUpload = require('express-fileupload');
 
-module.exports = function(app, pool) {
+module.exports = function(app, pool, readOnlyUser) {
   if (!app) {
     return;
   }
@@ -236,6 +236,10 @@ module.exports = function(app, pool) {
     await pool.none(sql, {schemaName: schemaName, tableName: tableName ,geometryName: geometryName});
     sql = "update $(schemaName:name).$(tableName:name) set $(geometryName:name)=st_intersection(st_makevalid($(geometryName:name)), st_makevalid(st_geomfromtext('POLYGON((-180 -89,-180 -63.2,180 -63.2,180 -89,-180 -89))', 4326))) where st_intersects($(geometryName:name), st_makevalid(st_geomfromtext('POLYGON((-180 -89, -180 -90, 180 -90, 180 -89, -180 -89))', 4326)))"
     await pool.none(sql, {schemaName: schemaName, tableName: tableName ,geometryName: geometryName});
+    if (readOnlyUser) {
+      sql = `grant select on $(schemaName:name).$(tableName:name) to ${readOnlyUser}`;
+      await pool.none(sql, {schemaName: schemaName, tableName: tableName});  
+    }
     return;
   }
 
