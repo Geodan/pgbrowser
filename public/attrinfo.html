@@ -160,12 +160,10 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
             mapSpinner.innerHTML = spinnerIcon;
         }
         mapSpinner.classList.remove('hide');
-        console.log('show spinner');
     }
 
     function hideSpinner() {
         document.querySelector('#mapspinner').classList.add('hide');
-        console.log('hide spinner');
     }
 
     // initialize the geographic map
@@ -214,7 +212,7 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
 
         map.on("dataloading", showSpinner);
         map.on("styledata", showSpinner);
-        map.on("idle", hideSpinner);
+        map.on("idle", ()=>{if (map.areTilesLoaded()) {hideSpinner()}});
 
         map.on('load', () => {
             // add the attribute layer
