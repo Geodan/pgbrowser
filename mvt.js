@@ -44,37 +44,6 @@ function queryColumnsNotNull(query) {
   return ''
 }
 
-const sql2 = (params, query) => {
-    let bounds = merc.bbox(params.x, params.y, params.z, false, '900913')
-  
-    return `
-    SELECT ST_AsMVT(q, '${params.table}', 4096, 'geom')
-    FROM 
-      (SELECT  ${query.columns ? `${query.columns},` : ''}
-        ST_AsMVTGeom(
-          ST_Transform(${query.geom_column}, 3857),
-          ST_MakeBox2D(ST_Point(${bounds[0]}, ${bounds[1]}), ST_Point(${bounds[2]}, ${bounds[3]}))
-        ) geom
-      FROM 
-        (SELECT ${query.columns ? `${query.columns},` : ''} ${query.geom_column}, srid
-          FROM 
-            ${sqlTableName(params.table)},
-            (SELECT ST_SRID(${query.geom_column}) AS srid FROM ${sqlTableName(params.table)} 
-              WHERE ${query.geom_column} is not null  LIMIT 1) a    
-          WHERE
-            ${query.geom_column} is not null AND
-            ST_transform(
-              ST_MakeEnvelope(${bounds.join()}, 3857), 
-              srid
-            ) && ${query.geom_column}
-            ${queryColumnsNotNull(query)}
-          -- Optional Filter
-          ${query.filter ? `AND ${query.filter}` : ''}
-      ) r
-    ) q
-    `
-  } // TODO, use sql place holders $1, $2 etc. instead of inserting user-parameters into query
-
   let sql = (query) => {
     return `
     SELECT ST_AsMVT(q, $(table.fullname), 4096, 'geom')
@@ -97,7 +66,7 @@ const sql2 = (params, query) => {
               srid
             ) && $(geomcolumn:name)
             ${queryColumnsNotNull(query)}
-      ) r limit 2000000
+      ) r order by random() limit 10000
     ) q
     `
   }
