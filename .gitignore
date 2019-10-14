@@ -1,3 +1,5 @@
 node_modules
-config/dbconfig.json
+!config/dbconfig.example.json
+!config/pgserver.json
+config/*.json
 cache
