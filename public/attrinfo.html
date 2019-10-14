@@ -715,7 +715,11 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
                             addLegendLine(schemes[selectedColorScheme].colors[index], value.value, layerType);
                             addGraphColors(schemes[selectedColorScheme].colors[index], value.value, value.value)
                             if (index < classValues.length - 1 || !needsSlice) {
-                                mapboxPaint.push(["all", [">=", getFieldValue, value.value], ["<=", getFieldValue, value.value]])
+                                if (typeof value.value === 'boolean') {
+                                    mapboxPaint.push(["==", getFieldValue, value.value])
+                                } else {
+                                    mapboxPaint.push(["all", [">=", getFieldValue, value.value], ["<=", getFieldValue, value.value]])
+                                }
                                 mapboxPaint.push(schemes[selectedColorScheme].colors[index]);
                             }
                         });
@@ -772,6 +776,9 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
                                 nextFrom = null;
                             }
                             let compare = (brk.to !== nextFrom)?"<=":"<";
+                            if (typeof brk.to == "boolean") {
+                                compare = '!=';
+                            }
                             if (globalStats.datatype === 'numeric') {
                                 mapboxPaint.push([compare,["to-number", ["get", `${globalStats.column}`], 0],brk.to],seqSchemes[selectedColorScheme].colors[index]);
                             } else if (globalStats.datatype === 'timestamptz') {
@@ -846,7 +853,7 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
         }
         // disable/enable equal interval
         let radioEqualInterval = document.querySelector('#interval');
-        if (stats.percentiles.length && typeof(stats.percentiles[0].from) !== 'string') {
+        if (stats.percentiles.length && typeof stats.percentiles[0].from !== 'string' && typeof stats.percentiles[0].from !== 'boolean') {
             radioEqualInterval.removeAttribute('disabled');
         } else {
             radioEqualInterval.setAttribute('disabled', '');
