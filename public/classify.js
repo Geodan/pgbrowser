@@ -1,49 +1,4 @@
-/**
- * @description
- * gets an array of colorbrewer color schemes for the given number of classes and color scheme type
- * @param {number} numClasses
- * number of classes to get colors for
- * @param {string} schemeType
- * the color scheme type. Qualitative: 'qual' or divergent: 'div' or sequential: 'seq'
- * @param {boolean} reversed
- * true if colors in the scheme should be reversed in order
- * @param {Object<{blind:'bad', print:'bad', screen:'bad',copy:'bad'}>}
- * requested usage properties, 'bad': not important, 'maybe'
- * @returns {Array.<{colors:[]}>}
- * Array of color schemes [{colors:[]}]
- */
-function getColorSchemes(numClasses, schemeType, reversed, usage) {
-    let result = [{colors:['#ff0000']}];
-    if (numClasses <= 2) {
-        result = colorbrewer.filter(scheme=>scheme.type===schemeType)
-            .map(scheme=>{
-                let result = Object.assign({},scheme.sets[0]);
-                let colors = result.colors.map(c=>c);
-                result.colors = [colors[2]];
-                if (numClasses === 2) {
-                    result.colors.unshift(colors[0]);
-                }
-                result.name = scheme.name;
-                result.type = scheme.type;
-                return result;
-            });
-    }
-    for (; numClasses > 2; numClasses--) {
-        result = colorbrewer.filter(scheme=>scheme.type===schemeType && scheme.sets.length > numClasses - 3)
-            .map(scheme=>{
-                let result = Object.assign({}, scheme.sets[numClasses - 3]);
-                result.name = scheme.name;
-                result.type = scheme.type;
-                return result;
-            });
-    }
-    if (result.length) {
-        if (reversed) {
-            result.forEach(scheme=>scheme.colors = scheme.colors.map(c=>c).reverse())
-        }
-    }
-    return result;
-}
+
 
 
 class AttributeStats {
@@ -65,7 +20,7 @@ class AttributeStats {
             }], // array of percentiles, max 100
             uniquevalues: false, // true if all values are unique
         }
-        this.classSpecs = {        
+        /*this.classSpecs = {        
             classType: 'mostfrequent', // mostfrequent, quantile, interval
             classCount: 1, // number of classes,
             colorSchemeType: 'qual', // qual, seq, div
@@ -75,12 +30,40 @@ class AttributeStats {
                 color: 'red',
                 label: 'label', // class label
             }] // array of classes
-        }
+        }*/
     }
 
     setStats(stats) {
         this.stats = stats;
     }
+}
+
+function roundToPrecision(number, precision, direction) {
+    let negative = (number < 0);
+    if (negative) {
+        number = -number;
+        direction = -direction;
+    }
+    let roundFunc = (direction < 0 ? Math.floor : direction === 0 ? Math.round : Math.ceil);
+    let exponent = (number === 0)?1:Math.floor(Math.log10(number));
+    let decimals = (exponent < precision)? precision - exponent : 0;
+    let fraction = number / Math.pow(10,exponent);
+    return Number((Math.pow(10, exponent) * roundFunc(fraction * Math.pow(10, precision)) / Math.pow(10, precision) * (negative ? -1 : 1)).toFixed(decimals));
+}
+
+export function getIntervalClassTicks (min, max, classCount) {
+    let niceMin = roundToPrecision(min, 2, -1);
+    let niceMax = roundToPrecision(max, 2, 1);
+    let interval = (niceMax - niceMin) / classCount;
+    let result = [];
+    for (let i = 0; i < classCount; i++) {
+        result.push(roundToPrecision(niceMin + i * interval, 2, -1))
+    }
+    return {
+        min: niceMin,
+        max: niceMax,
+        classes: result
+    };
 }
 
 /**
@@ -97,7 +80,7 @@ class AttributeStats {
  * @returns {array}
  * Array of class obects [{from, to, label, paint}]
  */
-function classify(stats, classCount, classType, paintValues) {
+export function classify(stats, classCount, classType, paintValues) {
     let resultClasses = [];
     if (paintValues.length < classCount) {
         classCount = paintValues.length;
@@ -179,3 +162,4 @@ function classify(stats, classCount, classType, paintValues) {
     return resultClasses;
 }
 
+export default classify;

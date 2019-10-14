@@ -71,10 +71,9 @@
     <link href="./node_modules/mapbox-gl/dist/mapbox-gl.css" rel="stylesheet" />
     <script src="./node_modules/mapbox-gl/dist/mapbox-gl.js"></script>
     <link href='loader.css' rel='stylesheet' />
-    <script src="./colorbrewer.js"></script>
-    <script src="./ticks.js"></script>
-    <script>
-    "use strict";
+    <script type="module">
+    import {getColorSchemes} from "./colorbrewer.js";
+    import {getIntervalClassTicks} from "./classify.js"
 
     let map = null;
     let globalStats = null;
@@ -598,46 +597,6 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
         return false;
     }
 
-    // get a colorbrewer color scheme that matches the parameters
-    // schemeTypes 'div', 'qual', 'seq'
-    // for diverging, qualitative and sequential legends
-    function getColorSchemes(numClasses, schemeType, reversed) {
-        for (; numClasses > 2; numClasses--) {
-            let result = colorbrewer.filter(scheme=>scheme.type===schemeType && scheme.sets.length > numClasses - 3)
-                .map(scheme=>{
-                    let result = Object.assign({}, scheme.sets[numClasses - 3]);
-                    result.name = scheme.name;
-                    result.type = scheme.type;
-                    return result;
-                });
-            if (result.length) {
-                if (reversed) {
-                    result.forEach(scheme=>scheme.colors = scheme.colors.map(c=>c).reverse())
-                }
-                return result;
-            }
-        }
-        if (numClasses <= 2) {
-            let result = colorbrewer.filter(scheme=>scheme.type===schemeType)
-                .map(scheme=>{
-                    let result = Object.assign({},scheme.sets[0]);
-                    let colors = result.colors.map(c=>c);
-                    result.colors = [colors[2]];
-                    if (numClasses === 2) {
-                        result.colors.unshift(colors[0]);
-                    }
-                    result.name = scheme.name;
-                    result.type = scheme.type;
-                    return result;
-                });
-            if (reversed) {
-                result.forEach(scheme=>scheme.colors = scheme.colors.map(c=>c).reverse());
-            }
-            return result;
-        }
-        return [{colors:['#ff0000']}];
-    }
-
     // applies the (newly) selected colorscheme to map, legend and graphs
     function selectColorScheme(schemeIndex)
     {
@@ -860,10 +819,11 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
         }
     }
     
+    init();
     </script>
 
 </head>
-<body onload="init()">
+<body>
     <h1>Attribute information</h1>
     <h2 id="tablename"></h2>
     <h2 id="columnname"></h2>
