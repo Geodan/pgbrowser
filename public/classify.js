@@ -66,6 +66,26 @@ export function getIntervalClassTicks (min, max, classCount) {
     };
 }
 
+// 1.7 => 2
+// 2.4 => 2.5
+// 2.8 => 3
+// 110 => 110
+// 120 => 120
+// 130 => 150
+// 155 => 175
+// 180 => 200
+// 220 => 250
+// 255 => 300
+// 320 => 350
+// 355 => 400
+// 420 => 450
+// 455 => 500
+// 520 => 600
+// 605 => 700
+// 705 => 800
+// 805 => 900
+// 905 => 1000
+
 /**
  * @description
  * creates array of class objects {from, to, label, paintValue}
@@ -162,4 +182,5 @@ export function classify(stats, classCount, classType, paintValues) {
     return resultClasses;
 }
 
+//export const _classify = classify;
 export default classify;

@@ -4119,6 +4119,10 @@ function supportsUsage(scheme, usage){
 */
 export function getColorSchemes(numClasses, schemeType, reversed, usage) {
   let result = [];
+  numClasses = parseInt(numClasses);
+  if (isNaN(numClasses)) {
+    return result;
+  }
   if (numClasses <= 0) {
     return result;
   }

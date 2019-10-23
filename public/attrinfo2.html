@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>PGServer Info</title>
+    <style>
+        .medium {width: 300px; height: auto;}
+        #mapcontainer {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        #map {display: inline-block; width: 500px; height: 500px; border: 1 px solid lightblue;}
+        #mapspinnercontainer {position: relative;}
+        #mapspinner {position: absolute; width: 50px; height: 50px; top: 225px; left:-275px;pointer-events: none;}
+        #mapspinner svg path, #mapspinner svg rect {fill:red;}
+        #mapspinner.hide {display: none;}
+        #legendcontainer {display: flex;}
+        #legend {
+            min-width: 250px;
+            padding-left: 5px;
+        }
+        #featurecontainer {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding-left: 5px;
+        }
+        #featureinfo {
+            display: inline-block;
+            max-width: 400px;
+        }
+        #graphs { 
+            display: flex; 
+            flex-wrap: wrap;
+        }
+        #graphs div {
+            margin: 5px;
+            text-align: center;
+        }
+        #colorschemes {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        #colorschemes div {
+            padding: 2px;
+            margin: 2px;
+            cursor: pointer;
+        }
+        #colorschemes div:hover {
+            background-color: lightgray;
+        }
+        #colorschemes div.selected {
+            background-color: darkgray;
+        }
+        #colorschemes svg {
+            display: block;
+        }
+        #colorschemes rect {
+            stroke: #333;
+            stroke-width: 0.5;
+        }
+    </style>
+    <script src="./node_modules/chart.js/dist/Chart.bundle.min.js"></script>
+    <link href="./node_modules/chart.js/dist/Chart.min.css" rel="stylesheet" />
+    <link href="./node_modules/mapbox-gl/dist/mapbox-gl.css" rel="stylesheet" />
+    <script src="./node_modules/mapbox-gl/dist/mapbox-gl.js"></script>
+    <link href='loader.css' rel='stylesheet' />
+    <script type="module">
+        import './attrinfo.js';
+    </script>
+
+</head>
+<body>
+    <h1>Attribute information</h1>
+    <h2 id="tablename"></h2>
+    <h2 id="columnname"></h2>
+
+    <div id="loader">
+        <h2>Loading statistics...</h2>
+        <div class="loader">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+    </div>
+    <div id="textstats"></div>
+    <div id="graphs">
+        <div id="graphnodata" class="canvascontainer medium">no-data<canvas></canvas></div>
+        <div id="graphvalues" class="canvascontainer medium">values<canvas></canvas></div>
+        <div id="graphquantiles" class="canvascontainer medium">count of values<canvas></canvas></div>
+        <div id="graphmostfrequent" class="canvascontainer medium">most common values<canvas></canvas></div>
+    </div>
+    <div id="mapcontainer">
+        <div id="map"></div>
+        <div id="mapspinnercontainer"><div id="mapspinner"></div></div>
+        <div id="featurecontainer">
+            <div id="legendcontainer">
+                <div id="legend"></div>
+                <classification-settings nonulls noequal nomostfrequent></classification-settings>
+            </div>
+            <div id="featureinfo"></div>
+        </div>
+    </div>
+    <div id="layerjson"></div>
+    <div id="back"></div>
+</body>
+</html>
