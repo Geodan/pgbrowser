@@ -8,21 +8,22 @@ import {LitElement, html, svg, css} from './pika-lit-element.min.js';
 class MapLegend extends LitElement {
     static get properties() {
         return {
-            legendType: {type: String, attribute: 'legendtype'}, // fill, circle, line
-            classInfo: {type: Array, attribute: 'classinfo'}
+            layerType: {type: String, attribute: 'layertype'}, // fill, circle, line
+            classInfo: {type: Object, attribute: 'classinfo'}
         }
     }
     constructor() {
         super();
-        this.classInfo = {};
-        this.legendType = 'fill';
+        this.classInfo = {classes:[]};
+        this.layerType = 'fill';
     }
     static get styles() {
         return css`
             host: {
-                display: block;
+                display: inline-block;
             }
             #legend {
+                display: inline-block;
                 min-width: 250px;
                 padding-left: 5px;
             }
@@ -31,21 +32,21 @@ class MapLegend extends LitElement {
     render() {
         return html`
             <div id="legend">
-                ${this.classInfo.map(classItem=>
+                ${this.classInfo.classes.map(classItem=>
                     this._renderLegendLine(classItem.paint, classItem.label))}
             </div>
         `
     }
-    updateLegend(legendType, classInfo) {
-        if (legendType) {
-            this.legendType = legendType;
+    updateLegend(layerType, classInfo) {
+        if (layerType) {
+            this.layerType = layerType;
         }
         this.classInfo = classInfo;
     }
     // add a line to the legend (color + label)
     _renderLegendLine(color, label) {
         let legendSvg;
-        switch (this.legendType) {
+        switch (this.layerType) {
             case 'fill':
                 legendSvg = svg`<svg width="30" height="15">
                             <rect width="30" height="15" style="fill:${color};fill-opacity:1;stroke-width:1;stroke:#444"></rect>

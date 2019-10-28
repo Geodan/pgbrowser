@@ -143,10 +143,16 @@ module.exports = function(app, pool, cache) {
  *                column:
  *                  type: string
  *                  description: name of column
- *                numvalues:
+ *                datarowcount:
+ *                  type: integer
+ *                  description: number of rows where column value not null
+ *                nullrowcount:
+ *                  type: integer
+ *                  description: number of rows where column value is null
+ *                uniquevalues:
  *                  description: number of different values, null means unknown (>2000)
  *                  type: integer
- *                uniquevalues:
+ *                allvaluesunique:
  *                  description: whether or not all values are unique
  *                  type: boolean
  *                values:
@@ -191,8 +197,8 @@ module.exports = function(app, pool, cache) {
               table: req.params.table,
               column: req.params.column,
               datatype: datatype,
-              numvalues: stats.length < 2000?stats.length:null,
-              uniquevalues: stats.length?stats[0].value !== null?stats[0].count === 1:stats.length>1?stats[1].count === 1:false:[],
+              uniquevalues: stats.length < 2000?stats.length:null,
+              allvaluesunique: stats.length?stats[0].value !== null?stats[0].count === 1:stats.length>1?stats[1].count === 1:false:[],
               values: stats
             }
             if (stats.length === 0) {
@@ -217,6 +223,8 @@ module.exports = function(app, pool, cache) {
               }
             }
             result.percentiles = queryResult;
+            result.datarowcount = result.percentiles.reduce((result, percentile)=>result + percentile.count, 0);
+            result.nullrowcount = result.values.filter(value=>value.value === null).reduce((result, value)=>result+value.count,0);
             res.json(result);
         } catch(err) {
             console.log(err);

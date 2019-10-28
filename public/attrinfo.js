@@ -1,6 +1,6 @@
 import {getColorSchemes} from "./colorbrewer.js";
 import classify, {getIntervalClassTicks} from "./classify.js";
-import './classification-settings.js';
+import './map-legend-config.js';
 
 let map = null;
 let globalStats = null;
@@ -17,7 +17,7 @@ async function init() {
     document.querySelector('#tablename').innerHTML = `Table: ${fullTableName}<br>Geometry: ${geomColumn} (${geomType})`;
     document.querySelector('#columnname').innerHTML = `Attribute: ${attrName} (${attrType})`;
     document.querySelector('#back').innerHTML = `<a href="tableinfo.html?table=${fullTableName}&geom_column=${geomColumn}">Back to layer info</a>`;
-    document.querySelector('classification-settings').onchange = (e)=> {
+    document.querySelector('map-legend-config').onchange = (e)=> {
         //console.log(e.detail);
         const classification = classify(globalStats, e.detail.classCount, e.detail.classType, e.detail.colors)
         console.log(classification);
@@ -289,8 +289,8 @@ function addRowCountNullValuesToStats(stats) {
 
 function textStats(stats) {
     document.querySelector('#textstats').innerHTML = `
-    <b>min:</b> ${stats.percentiles.length?stats.percentiles[0].from:null} <b>max:</b> ${stats.percentiles.length?stats.percentiles[stats.percentiles.length-1].to:null} <b>count:</b> ${stats.nullValues+stats.rowCount} ${!stats.nullValues?"(no-data: 0)":!stats.rowCount?"(only no-data)":`(data: ${stats.rowCount}, no-data: ${stats.nullValues})`}, <b>all unique:</b> ${stats.uniquevalues?"yes":"no"}
-    `        
+    <b>min:</b> ${stats.percentiles.length?stats.percentiles[0].from:null} <b>max:</b> ${stats.percentiles.length?stats.percentiles[stats.percentiles.length-1].to:null} <b>count:</b> ${stats.nullValues+stats.rowCount} ${!stats.nullValues?"(no-data: 0)":!stats.rowCount?"(only no-data)":`(data: ${stats.rowCount}, no-data: ${stats.nullValues})`}, <b>all unique:</b> ${stats.allvaluesunique?"yes":"no"}
+    `
 }
 
 // display graphs based on statistics
@@ -422,7 +422,7 @@ function graphStats(stats) {
         }
     })
     // most frequent values graph
-    if (!stats.uniquevalues) {
+    if (!stats.allvaluesunique) {
         const valuesSummary = stats.values.filter(value=>value.value !== null).slice(0,10);
         const valuesSummeryRowCount = valuesSummary.reduce((result, value)=>result+value.count,0);
         if (stats.rowCount > valuesSummeryRowCount) {
@@ -727,7 +727,7 @@ function applyLegendToMap() {
 // enable or disable legend control elements based on attribute stats
 function updateLegendControls(stats) {
     // enable or disable controls that apply to these statistics
-    let settings = document.querySelector('classification-settings');
+    let settings = document.querySelector('map-legend-config');
     if (stats.nullValues) {
         settings.removeAttribute('nonulls');
     } else {
@@ -740,7 +740,7 @@ function updateLegendControls(stats) {
         settings.setAttribute('noequal', '');
     }
     // disable/enable most frequent values
-    if (stats.uniquevalues) {
+    if (stats.allvaluesunique) {
         settings.setAttribute('nomostfrequent', '');
     } else {
         settings.removeAttribute('nomostfrequent');

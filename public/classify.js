@@ -7,7 +7,7 @@ class AttributeStats {
             table: "", // name of attribute source
             column: "", // attribute name
             datatype: "", // database datatype, 'varchar', 'numeric', 'int8', 'timestamptz' ...
-            numvalues: 0, // number of most frequent values, max 101
+            uniquevalues: 0, // number of most frequent values, max 101
             values: [{ // array of most frequent values + null values, ordered by count
                 count: 0, // count of values
                 value: null // value
@@ -18,7 +18,7 @@ class AttributeStats {
                 count: 0, // number of values in this percentile
                 percentile: 1 // percentile order number
             }], // array of percentiles, max 100
-            uniquevalues: false, // true if all values are unique
+            allvaluesunique: false, // true if all values are unique
         }
         /*this.classSpecs = {        
             classType: 'mostfrequent', // mostfrequent, quantile, interval
@@ -97,8 +97,8 @@ export function getIntervalClassTicks (min, max, classCount) {
  * Type of classification: 'mostfrequent' or 'quantile' or 'interval'
  * @param {array} paintValues
  * Array of paintValues (colors or linewidths or circle radii) to assign to classes
- * @returns {array}
- * Array of class obects [{from, to, label, paint}]
+ * @returns {classType {string}, classCount {number}, classes {array}}
+ * Object  {classType,classCount, classes:[{from, to, label, paint}]}
  */
 export function classify(stats, classCount, classType, paintValues) {
     let resultClasses = [];
@@ -179,7 +179,7 @@ export function classify(stats, classCount, classType, paintValues) {
         default: 
             resultClasses.push({from:'', to:'', label: `unsupported classType: ${classType}`, paint: paintValues[0]});
     }
-    return resultClasses;
+    return {classes:resultClasses, classCount: resultClasses.length, classType: classType}
 }
 
 //export const _classify = classify;

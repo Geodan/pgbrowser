@@ -97,7 +97,9 @@ class ClassificationSettings extends LitElement {
         `
     }
     _renderColorSchemes() {
-        this.colorSchemes = getColorSchemes(this.classCount, this.colorSchemeType, this.reverseColors);
+        if (!this.colorSchemes) {
+            this.colorSchemes = getColorSchemes(this.classCount, this.colorSchemeType, this.reverseColors);
+        }
         let classCount = this.colorSchemes[0].colors.length;
         if (this.selectedColorScheme > this.colorSchemes.length - 1) {
             this.selectedColorScheme = this.colorSchemes.length - 1;
@@ -115,7 +117,7 @@ class ClassificationSettings extends LitElement {
         this.selectedColorScheme = index;
         this._changed();
     }
-    getSettings() {
+    getConfig() {
         return {
             classCount: this.classCount,
             classType: this.classType,
@@ -136,12 +138,16 @@ class ClassificationSettings extends LitElement {
         this.colorSchemeType = this.shadowRoot.querySelector('input[name="colorscheme"]:checked').value;
         this.outlines = this.shadowRoot.querySelector('input[name="displayoutlines"]').checked;
         this.hideNulls = this.shadowRoot.querySelector('input[name="hidenulls"]').checked;
+        this.colorSchemes = getColorSchemes(this.classCount, this.colorSchemeType, this.reverseColors);
+        if (this.selectedColorScheme > this.colorSchemes.length - 1) {
+            this.selectedColorScheme = this.colorSchemes.length - 1;
+        }
         this.dispatchEvent(new CustomEvent('change', {
-            detail: this.getSettings(),
+            detail: this.getConfig(),
             bubbles: true,
             composed: true
         }))
     }
 }
 
-window.customElements.define('classification-settings', ClassificationSettings);
+window.customElements.define('map-legend-config', ClassificationSettings);

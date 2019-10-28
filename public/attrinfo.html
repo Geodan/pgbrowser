@@ -366,7 +366,7 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
 
     function textStats(stats) {
         document.querySelector('#textstats').innerHTML = `
-        <b>min:</b> ${stats.percentiles.length?stats.percentiles[0].from:null} <b>max:</b> ${stats.percentiles.length?stats.percentiles[stats.percentiles.length-1].to:null} <b>count:</b> ${stats.nullValues+stats.rowCount} ${!stats.nullValues?"(no-data: 0)":!stats.rowCount?"(only no-data)":`(data: ${stats.rowCount}, no-data: ${stats.nullValues})`}, <b>all unique:</b> ${stats.uniquevalues?"yes":"no"}
+        <b>min:</b> ${stats.percentiles.length?stats.percentiles[0].from:null} <b>max:</b> ${stats.percentiles.length?stats.percentiles[stats.percentiles.length-1].to:null} <b>count:</b> ${stats.nullValues+stats.rowCount} ${!stats.nullValues?"(no-data: 0)":!stats.rowCount?"(only no-data)":`(data: ${stats.rowCount}, no-data: ${stats.nullValues})`}, <b>all unique:</b> ${stats.allvaluesunique?"yes":"no"}
         `        
     }
 
@@ -499,7 +499,7 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
             }
         })
         // most frequent values graph
-        if (!stats.uniquevalues) {
+        if (!stats.allvaluesunique) {
             const valuesSummary = stats.values.filter(value=>value.value !== null).slice(0,10);
             const valuesSummeryRowCount = valuesSummary.reduce((result, value)=>result+value.count,0);
             if (stats.rowCount > valuesSummeryRowCount) {
@@ -819,7 +819,7 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
         }
         // disable/enable most frequent values
         let radioMostFrequent = document.querySelector('#mostfrequent');
-        if (stats.uniquevalues) {
+        if (stats.allvaluesunique) {
             radioMostFrequent.setAttribute('disabled', '');
         } else {
             radioMostFrequent.removeAttribute('disabled');
