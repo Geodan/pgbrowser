@@ -187,7 +187,7 @@ function updateMap(layerType, stats, classInfo, legendConfig) {
                 }
                 if (stats.datatype === 'numeric') {
                     mapboxPaint.push([compare,["to-number", ["get", stats.column], 0],classItem.to],classItem.paint);
-                } else if (stats.datatype === 'timestamptz') {
+                } else if (stats.datatype === 'timestamptz' || stats.datatype === 'date') {
                     mapboxPaint.push([compare,["get", stats.column],classItem.to.toJSON()],classItem.paint);
                 } else {
                     mapboxPaint.push([compare,["get", stats.column],classItem.to],classItem.paint);
@@ -196,16 +196,18 @@ function updateMap(layerType, stats, classInfo, legendConfig) {
             mapboxPaint.push(classInfo.classes[classInfo.classCount - 1].paint)
             break;
         case 'interval':
-            mapboxPaint = ["case"];
-            classInfo.classes.forEach((classItem, index)=>{
-                if (stats.datatype === 'numeric') {
-                    // convert javscript string to number
-                    mapboxPaint.push(["<", ["to-number",["get", stats.column], 0],classItem.to], classItem.paint);
-                } else {
-                    mapboxPaint.push(["<", ["get", stats.column],classItem.to], classItem.paint);
-                }
-            })
-            mapboxPaint.push(classInfo.classes[classInfo.classCount - 1].paint);
+            if (classInfo.classCount) {
+                mapboxPaint = ["case"];
+                classInfo.classes.forEach((classItem, index)=>{
+                    if (stats.datatype === 'numeric') {
+                        // convert javscript string to number
+                        mapboxPaint.push(["<", ["to-number",["get", stats.column], 0],classItem.to], classItem.paint);
+                    } else {
+                        mapboxPaint.push(["<", ["get", stats.column],classItem.to], classItem.paint);
+                    }
+                })
+                mapboxPaint.push(classInfo.classes[classInfo.classCount - 1].paint);
+            }
             break;
     }
     if (mapboxPaint) {

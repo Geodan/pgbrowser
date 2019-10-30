@@ -229,7 +229,10 @@ class MapGraph extends LitElement {
                                     classItem = classInfo.classes[classInfo.classCount - 1];
                                 }
                             }
-                            return classItem.paint;
+                            if (classItem) {
+                                return classItem.paint;
+                            }
+                            return '#000000'
                         }):'red',
                         data: valuesSummary.map(value=>value.count)
                     }

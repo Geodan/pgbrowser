@@ -86,6 +86,23 @@ export function getIntervalClassTicks (min, max, classCount) {
 // 805 => 900
 // 905 => 1000
 
+function formatLabel(from, to, nextfrom){
+    if (from === to) {
+        return `${from}`;
+    }
+    if (nextfrom === to) {
+        if (typeof nextfrom === 'boolean') {
+            return `${from}`;
+        }
+        if (parseInt(nextfrom) == nextfrom && parseInt(from) == from) {
+            if (--to == from) {
+                return `${from}`;
+            }
+        }
+    }
+    return `${from} - ${to}`;
+}
+
 /**
  * @description
  * creates array of class objects {from, to, label, paintValue}
@@ -156,13 +173,17 @@ export function classify(stats, classCount, classType, paintValues) {
                     return result;
                 },[])
             }
-            percentileBreaks.forEach((brk, index)=>{
-                resultClasses.push({from: brk.from, to: brk.to, label: `${brk.from} - ${brk.to}`, paint: paintValues[index]})
+            percentileBreaks.forEach((brk, index, arr)=>{
+                resultClasses.push({from: brk.from, to: brk.to, label: formatLabel(brk.from, brk.to, index < arr.length - 1?arr[index+1].from:null), paint: paintValues[index]})
             })
             break;
         case 'interval':
             let min = stats.percentiles[0].from;
             let max = stats.percentiles.length > 1 ? stats.percentiles[stats.percentiles.length - 1].to : min;
+            if (typeof min.getTime === 'function') {
+                min = min.getTime();
+                max = max.getTime();
+            }
             if (typeof min === "number") {
                 let classTicks = getIntervalClassTicks(min, max, classCount);
                 classTicks.classes.forEach((classStart, index)=>{
@@ -171,8 +192,14 @@ export function classify(stats, classCount, classType, paintValues) {
                     if (stats.datatype === 'int4' || stats.datatype === 'int8') {
                         legendFrom = Math.floor(legendFrom);
                         legendTo = Math.floor(legendTo);
+                    } else if (stats.datatype === 'date') {
+                        legendFrom = new Date(legendFrom).toLocaleDateString(navigator.language);
+                        legendTo = new Date(legendTo).toLocaleDateString(navigator.language);
+                    } else if (stats.datatype === 'timestamptz') {
+                        legendFrom = new Date(legendFrom).toISOString();
+                        legendTo = new Date(legendTo).toISOString();
                     }
-                    resultClasses.push({from: legendFrom, to: legendTo, label: `${(legendFrom)} - ${legendTo}`, paint: paintValues[index]});                    
+                    resultClasses.push({from: legendFrom, to: legendTo, label: formatLabel(legendFrom, legendTo), paint: paintValues[index]});                    
                 })
             }
             break;
