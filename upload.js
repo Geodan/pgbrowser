@@ -6,6 +6,10 @@ const { exec } = require('child_process');
 
 const fileUpload = require('express-fileupload');
 
+const Seven = require('node-7z');
+const sevenBin = require('7zip-bin');
+
+
 module.exports = function(app, pool, readOnlyUser) {
   if (!app) {
     return;
@@ -117,6 +121,37 @@ module.exports = function(app, pool, readOnlyUser) {
     })
   }
 
+  function un7zip(fileName, tempDir) {
+    fs.mkdirSync(tempDir);
+    const stream  = Seven.extractFull(fileName, tempDir + '/', {$bin: sevenBin.path7za});
+    return new Promise((resolve, reject) => {
+        //let data = "";
+        //stream.on("data", chunk => data += chunk);
+        let success = true;
+        stream.on("end", () => {
+          if (!success) {
+            return;
+          }
+          try {
+            //console.log(stream.info);
+            fs.unlinkSync(fileName);
+            fs.renameSync(tempDir, fileName);
+          } catch (err) {
+            reject(`failed to mv zip files to directory: ${err.message}`);
+          } finally {
+            resolve();
+          }
+        });
+        stream.on("error", error => {
+          success = false;
+          rmr(tempDir).catch(err=>{}).finally(()=>{
+            reject(`un7z failed: ${error}`)
+          })
+        });
+    });
+  }
+  
+
   async function unArchiveFile(fileName) {
     let parsedPath = path.parse(fileName);
     let tempDir = `${__dirname}/temp/${parsedPath.base}`;
@@ -131,7 +166,12 @@ module.exports = function(app, pool, readOnlyUser) {
       try {
         await untar(fileName, tempDir);
       } catch(err) {
+        try {
+          await un7zip(fileName, tempDir)
+        }
+        catch(err) {
 
+        }
       }
     } 
   }
