@@ -1,6 +1,5 @@
 const express = require('express');
 const fs = require('fs');
-//const ogr2ogr = require('ogr2ogr');
 const path = require('path');
 const { exec } = require('child_process');
 
@@ -49,7 +48,7 @@ module.exports = function(app, pool, readOnlyUser) {
         schemaInfo.schemas = result.map(row=>row.schema_name);
       }),
       pool.one("show search_path",[]).then(result=>{
-        schemaInfo.searchpath = result.search_path;        
+        schemaInfo.searchpath = result.search_path;
       })
     ])
     .then(()=>setDefaultSchema())
@@ -279,6 +278,27 @@ module.exports = function(app, pool, readOnlyUser) {
     if (readOnlyUser) {
       sql = `grant select on $(schemaName:name).$(tableName:name) to ${readOnlyUser}`;
       await pool.none(sql, {schemaName: schemaName, tableName: tableName});  
+    }
+    sql = "select st_srid($(geometryName:name)) srid from $(schemaName:name).$(tableName:name) where geom is not null limit 1";
+    let result = await pool.oneOrNone(sql, {schemaName: schemaName, tableName: tableName, geometryName: geometryName});
+    if (result && result.srid === 0) {
+      // undefined srid, guess srid
+      sql = `with sample as
+      (select geom from $(schemaName:name).$(tableName:name) limit 200000)
+      select min(st_xmin($(geometryName:name))) minx, min(st_ymin($(geometryName:name))) miny, 
+      max(st_xmax($(geometryName:name))) maxx, max(st_ymax($(geometryName:name))) maxy
+        from sample`;
+      result = await pool.one(sql, {schemaName: schemaName, tableName: tableName, geometryName: geometryName});
+      let srid = 0;
+      if (result.minx >= -180 && result.maxx <= 180 && result.miny <= -90 && result.maxy <= 90) {
+        srid = 4326;
+      } else if (result.minx > -10 && result.maxx <= 288999 && result.miny > 289000 && result.maxy < 629000) {
+        srid = 28992;
+      }
+      if (srid !== 0) {
+        sql = "update $(schemaName:name).$(tableName:name) set $(geometryName:name)=st_setsrid($(geometryName:name), $(srid))";
+        await pool.none(sql, {schemaName: schemaName, tableName: tableName ,geometryName: geometryName, srid: srid});
+      }
     }
     return;
   }
