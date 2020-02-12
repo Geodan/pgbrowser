@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Link SLD</title>
+    <link href="pgserver.css" rel="stylesheet">
+    <style>
+        table, th, td { border: 1px solid black; border-collapse:collapse;}
+        th {background-color: lightgrey;}
+    </style>
+    <script>
+      async function linkSLD() {
+          const urlParams = new URLSearchParams(window.location.search);
+          let sldFile = urlParams.get('sld');
+          let sldLayerParams = Array.from(document.querySelectorAll('input[name="sldlayer"]'))
+            .map(elem=>`&sldlayer=${encodeURIComponent(elem.value)}`).join('');
+          let dbLayerParams = Array.from(document.querySelectorAll('select[name="dblayer"]'))
+            .map(elem=>`&dblayer=${encodeURIComponent(elem.value)}`).join('');
+          fetch(`sldqueries?sld=${encodeURIComponent(sldFile)}${sldLayerParams}${dbLayerParams}`)
+            .then(response=>{
+              if (response.ok) {
+                  response.json().then(json=>{
+                    
+                  });
+              }
+          });
+      }
+      function sortTableNames(t1, t2) {
+        if (t1.f_table_catalog < t2.f_table_catalog) {
+            return -1;
+        }
+        if (t1.f_table_catalog > t2.f_table_catalog) {
+            return 1;
+        }
+        if (t1.f_table_schema < t2.f_table_schema) {
+            return -1;
+        }
+        if (t1.f_table_schema > t2.f_table_schema) {
+            return 1;
+        }
+        if (t1.f_table_name < t2.f_table_name) {
+            return -1;
+        }
+        if (t1.f_table_name > t2.f_table_name) {
+            return 1;
+        }
+        if (t1.f_geometry_column < t2.f_geometry_column) {
+            return -1;
+        }
+        if (t1.f_geometry_column > t2.f_geometry_column) {
+            return 1;
+        }
+        return 0;
+      }
+      async function updateForm() {
+          // TODO request error handling
+          const urlParams = new URLSearchParams(window.location.search);
+          let listdiv = document.querySelector('#layerlist');
+          let response = await fetch(`sldlayers?sld=${urlParams.get('sld')}`);
+          let sldLayers = [];
+          if (response.ok) {
+            sldLayers = await response.json();
+          }
+          response = await fetch('../data/list_layers');
+          if (response.ok) {
+            tables = await response.json();
+            let tableOptions = tables.sort(sortTableNames)
+            .map(table => {
+                return `<option>${table.f_table_schema}.${table.f_table_name}</option>`
+            })
+            .join('\n');
+            let layerInputs = "<tr><th>SLD Layer</th><th>DB Layer</th></tr>";
+            for (let layer = 0; layer < sldLayers.length; layer++) {
+                layerInputs += `<tr><td>${sldLayers[layer]}<input type="hidden" name="sldlayer" value="${sldLayers[layer]}"></td><td><select name="dblayer">${tableOptions}</select></td></tr>`
+            }
+            listdiv.innerHTML = layerInputs;
+        } else {
+            listdiv.innerHTML = "error getting tables"
+        }
+        document.querySelector('input[type=button]').value = `link ${urlParams.get('sld')}`
+      }
+    </script>
+</head>
+<body onload="updateForm()">
+
+<form id="linksld" action="linksld" method="post" encType="multipart/form-data">
+Map sld layers to data layers:<br>
+<table id="layerlist"></table>
+<input type="button" value="link" onclick="linkSLD()"><br>
+</form>
+<div id="filelist"></div>
+<div id="importresult"></div>
+</body>
+</html>

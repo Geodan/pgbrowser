@@ -333,7 +333,93 @@ module.exports = function(app, pool, readOnlyUser) {
         tableStats(pool, tableName, schemaName)
       });    
   })
+
+  function getLayersFromSld(fileName) {
+    return new Promise((resolve, reject)=>{
+      exec (`python3 /home/anneb/project/sld4mvt/main.py -f getlayernames -s ${fileName}`, (err, stdout, stderr)=>{
+        if (err) {
+            reject(err.message);
+        } else {
+            resolve({stdout: stdout.split('\n').filter(layer=>layer.trim()!==''), stderr: stderr});
+        }
+      })
+    })
+  }
+
+  function getQueriesFromSld(fileName, sldlayer, dblayer) {
+    let mapping = `{'${sldlayer}':'${dblayer}'}`;
+    // todo: security: reject sldlayer or dblayer that contain escape chars or quotes
+    return new Promise((resolve, reject)=>{
+      exec (`python3 /home/anneb/project/sld4mvt/main.py -f getqueries -s "${fileName}" -l "${sldlayer}" -m "${mapping}"`, (err, stdout, stderr)=>{
+        if (err) {
+            reject(err.message);
+        } else {
+            resolve({stdout: stdout.split('\n').filter(layer=>layer.trim()!==''), stderr: stderr});
+        }
+      })
+    })
+  }
+
+  async function importSldQueries(filename, sldlayer, dblayer, queries) {
+    filenameParts = filename.split('.');
+    if (filenameParts.length == 2 && filenameParts[1] === 'sld' && Array.isArray(queries) && queries.length > 0) {
+      try {
+        let sldTablename = `${filenameParts[0]}_sld`
+        let sql = "create table if not exists $(tablename:name) (z int, sldlayer varchar, dblayer varchar, query varchar)";
+        let sqlParams = {tablename: sldTablename, sldlayer: sldlayer, dblayer, dblayer};
+        await pool.none(sql, sqlParams);
+        sql = "delete from $(tablename:name) where sldlayer=$(sldlayer) and dblayer=$(dblayer)";
+        await pool.none(sql, sqlParams);
+        for (let i = 0; i < queries.length; i++) {
+          sql = "insert into $(tablename:name) (z, sldlayer, dblayer, query) values ($(zoom), $(sldlayer) , $(dblayer), $(query))";
+          sqlParams = {tablename: sldTablename, zoom: i, sldlayer: sldlayer, dblayer: dblayer, query: queries[i]};
+          await pool.none(sql, sqlParams);
+        }
+      } catch (err) {
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  app.get('/admin/sldlayers', async (req, res) => {
+    let fileName = `${__dirname}/admin/files/${req.query.sld}`;
+    try {
+      let result = await getLayersFromSld(fileName);
+      res.json(result.stdout);
+    } catch(err) {
+      res.status(500).json(err);
+    }
+  });
+
+  app.get('/admin/sldqueries', async (req, res) => {
+    let fileName = `${__dirname}/admin/files/${req.query.sld}`;
+    let sldlayer = req.query.sldlayer;
+    let dblayer = req.query.dblayer;
+    if (typeof sldlayer === 'string') {
+      sldlayer = [sldlayer];
+    }
+    if (typeof dblayer === 'string') {
+      dblayer = [dblayer];
+    }
+    try {
+      for (let i = 0; i < sldlayer.length; i++) {
+        let result = await getQueriesFromSld(fileName, sldlayer[i], dblayer[i]);
+        let queries = result.stdout;
+        result = await importSldQueries(req.query.sld, sldlayer[i], dblayer[i], queries);
+        if (!result) {          
+          throw "failed to store queries in database";
+        }
+      }
+      res.json({"result": "ok"});
+    } catch(err) {
+      res.status(500).json({"result": "error", "error": err});
+    }
+  })
 }
+
+
 
 async function tableStats(pool, fullTableName, defaultSchema) {
   let parts = fullTableName.split('.');

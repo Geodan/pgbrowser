@@ -198,4 +198,70 @@ module.exports = function(app, pool, cache) {
             res.status(status).json({error:err.message})
         }
     })
+    app.get('/data/:datasource/sldmvt/:z/:x/:y', cacheMiddleWare, async (req, res)=>{
+      if (!req.query.geom_column) {
+          req.query.geom_column = 'geom'; // default
+      }
+      req.params.table = req.params.datasource;
+      try {
+        let sqlString = "select queries from $(sldtable:name)";
+        let sqlParams = {sldtable: req.params.datasource};
+        const result = await pool.one(sqlString, sqlParams);
+        let queries = result.queries.split('","');
+
+      } catch (err) {
+          console.log(err);
+          let status = 500;
+          switch (err.code) {
+            case '42P01':
+              // table does not exist
+              status = 422;
+              break;
+            case '42703':
+              // column does not exist
+              status = 422;
+              break;
+            default:
+          }
+          res.status(status).json({error:err.message})
+      }
+      try {
+          let bounds = merc.bbox(req.params.x, req.params.y, req.params.z, false, '900913');
+          let sqlString = sql(req.query);
+          let sqlParams = {
+            table: dbutils.splitSchemaTable(req.params.table),
+            columns: req.query.columns.split(','),
+            geomcolumn: req.query.geom_column,
+            bounds: bounds,
+            bounds0: bounds[0],
+            bounds1: bounds[1],
+            bounds2: bounds[2],
+            bounds3: bounds[3]
+          };
+          req.query.columns.split(',').forEach((column, index)=>{
+            sqlParams[`column${index}`] = column;
+          })
+          const result = await pool.one(sqlString, sqlParams);
+          const mvt = result.st_asmvt
+          if (mvt.length === 0) {
+              res.status(204)
+          }
+          res.header('Content-Type', 'application/x-protobuf').send(mvt);
+      } catch(err) {
+          console.log(err);
+          let status = 500;
+          switch (err.code) {
+            case '42P01':
+              // table does not exist
+              status = 422;
+              break;
+            case '42703':
+              // column does not exist
+              status = 422;
+              break;
+            default:
+          }
+          res.status(status).json({error:err.message})
+      }
+  })
 }
