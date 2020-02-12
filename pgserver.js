@@ -56,6 +56,7 @@ const geojson = require('./geojson.js')(app, readOnlyPool);
 const geobuf = require('./geobuf.js')(app, readOnlyPool);
 const listLayers = require('./list_layers.js')(app, readOnlyPool);
 const layerColumns = require('./layer_columns.js')(app, readOnlyPool);
+const sldLayerColums = require('./layer_slds')(app, readOnlyPool);
 const bbox = require('./bbox.js')(app, readOnlyPool, cache);
 const query = require('./query.js')(app, readOnlyPool);
 const columnStats = require('./column_stats.js')(app, readOnlyPool, cache);
