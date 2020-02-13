@@ -14,23 +14,33 @@ AND has_table_privilege(c.oid, 'SELECT'::text)`;
 module.exports = function (app, pool) {
 /**
  * @swagger
- *
- * /data/slds/{table}:
+ * 
+ * /data/slds:
  *   get:
  *     description: Returns a list sldtables.
  *     tags: ['meta']
  *     summary: 'list sld tables'
  *     produces:
  *       - application/json
- *     parameters:
- *       - name: table
- *         description: Optional name of the table to filter sld tables for
- *         in: path
- *         required: false
- *         type: string 
  *     responses:
  *       200:
  *         description: "json array of sldlayers [{sldtable: string, sldlayer: string, dblayer: string}]"
+ * /data/slds/{table}:
+ *   get:
+ *     description: Returns a list sldtables.
+ *     tags: ['meta']
+ *     summary: 'list sld tables with reference to the table identified by parameter "table"'
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: table
+ *         description: Name of the table to filter sld tables for
+ *         in: path
+ *         required: true
+ *         type: string 
+ *     responses:
+ *       200:
+ *         description: "json array of sldlayers that reference parameter 'table' [{sldtable: string, sldlayer: string, dblayer: string}]"
  */
   app.get('/data/slds/:table?', async (req, res)=> {
     let table = req.params.table;
