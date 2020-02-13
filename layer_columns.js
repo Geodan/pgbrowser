@@ -21,7 +21,7 @@ module.exports = function (app, pool) {
 /**
  * @swagger
  *
- * /data/layer_columns/:table:
+ * /data/layer_columns/{table}:
  *   get:
  *     description: Returns a list of columns in the specified table.
  *     tags: ['meta']

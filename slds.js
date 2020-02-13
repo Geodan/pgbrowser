@@ -15,7 +15,7 @@ module.exports = function (app, pool) {
 /**
  * @swagger
  *
- * /data/slds/:table:
+ * /data/slds/{table}:
  *   get:
  *     description: Returns a list sldtables.
  *     tags: ['meta']
@@ -30,7 +30,7 @@ module.exports = function (app, pool) {
  *         type: string 
  *     responses:
  *       200:
- *         description: json array of sldlayers [{sldtable: string, sldlayer: string, dblayer: string}]
+ *         description: "json array of sldlayers [{sldtable: string, sldlayer: string, dblayer: string}]"
  */
   app.get('/data/slds/:table?', async (req, res)=> {
     let table = req.params.table;

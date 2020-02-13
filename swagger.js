@@ -28,6 +28,7 @@ const swaggerJSDocOptions = {
       './mvt.js', 
       './list_layers.js', 
       './layer_columns.js', 
+      './slds.js',
       './bbox.js', 
       './geojson.js', 
       './geobuf.js', 
