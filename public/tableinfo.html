@@ -21,15 +21,7 @@
         return url;
     }
 
-    function addBboxllToLinks(bboxll,geomtype)
-    {
-        if (bboxll) {
-            document.querySelectorAll('#columns > li > a')
-                .forEach(a=>(a.setAttribute('href', replaceGeomType(a.getAttribute('href'),geomtype) + '&bboxll='+JSON.stringify(bboxll))))
-        }
-    }
-    
-    function init() {
+    async function init() {
         const urlParams = new URLSearchParams(window.location.search);
         const fullTableName = urlParams.get('table');
         const geomType = urlParams.get('geomtype');
@@ -40,48 +32,55 @@
         document.querySelector('#tablename').innerHTML = `Table: ${fullTableName}<br>Geometry: ${geomcolumn} (${geomType})`;
         const parts = fullTableName.split('.');
         const tableName = (parts.length > 1) ? parts[1] : parts[0];
-        fetch(`data/layer_columns/${fullTableName}`).then(response=>{
-            const list = document.querySelector('#columns');
+        let response = await fetch(`api/bbox/${fullTableName}${geomcolumn?`?geom_column=${geomcolumn}`:''}`);
+        const bbox = document.querySelector('#bbox');
+        const list = document.querySelector('#columns');
+        try {
             if (response.ok) {
-                response.json().then(json=> {
-                    for (item of json) {
+                let json = await response.json()
+                document.querySelector('#tablename').innerHTML = `Table: ${fullTableName}<br>Geometry: ${geomcolumn} (${json.geomtype})`; // update geomtype
+
+                bbox.innerHTML = `number of rows: ${json.allrows}<br>
+                                number of geometries: ${json.geomrows}<br>
+                                srid: EPSG:${json.srid}<br>
+                                bbox lon/lat: ${json.bboxll?`sw: ${json.bboxll[0][0]},${json.bboxll[0][1]}, ne: ${json.bboxll[1][0]},${json.bboxll[1][1]}`: 'not defined'}<br>
+                                bbox (EPSG:${json.srid}): ${json.srid?`ll: ${json.bboxsrid[0][0]},${json.bboxsrid[0][1]}, tr: ${json.bboxsrid[1][0]},${json.bboxsrid[1][1]}`: 'not defined'}<br>
+                                `
+                response = await fetch(`data/slds/${fullTableName}`);
+                let sldlayers = [];
+                if (response.ok) {
+                    sldlayers = await response.json();
+                }
+                response = await fetch(`data/layer_columns/${fullTableName}`);
+                if (response.ok) {
+                    let items = await response.json();
+                    for (item of items) {
                         const li = document.createElement('li');
-                        li.innerHTML = `<a href="./attrinfo.html?table=${fullTableName}&geom_column=${geomcolumn?geomcolumn:''}&column=${item.field_name}&columntype=${item.field_type}&geomtype=${geomType}"><b>${item.field_name}</b></a> (${item.field_type})`
+                        let href = `./attrinfo.html?table=${fullTableName}&geom_column=${geomcolumn?geomcolumn:''}&column=${item.field_name}&columntype=${item.field_type}&geomtype=${json.geomtype}&bboxll=${JSON.stringify(json.bboxll)}`;
+                        li.innerHTML = `<a href="${href}"><b>${item.field_name}</b></a> (${item.field_type}) ${sldlayers.map(layer=>` ${layer.sldtable.split('.')[1].slice(0,-4)}.<a href="${href}&sldtable=${layer.sldtable}&sldlayer=${layer.sldlayer}">${layer.sldlayer}</a>`).join(',')}`
                         list.appendChild(li);
                     }
-                    fetch(`api/bbox/${fullTableName}${geomcolumn?`?geom_column=${geomcolumn}`:''}`).then(response=>{
-                        const bbox = document.querySelector('#bbox');
-                        if (response.ok) {
-                            response.json().then(json=> {
-                                document.querySelector('#tablename').innerHTML = `Table: ${fullTableName}<br>Geometry: ${geomcolumn} (${json.geomtype})`; // update geomtype
-                                addBboxllToLinks(json.bboxll,json.geomtype);
-                                bbox.innerHTML = `number of rows: ${json.allrows}<br>
-                                                number of geometries: ${json.geomrows}<br>
-                                                srid: EPSG:${json.srid}<br>
-                                                bbox lon/lat: ${json.bboxll?`sw: ${json.bboxll[0][0]},${json.bboxll[0][1]}, ne: ${json.bboxll[1][0]},${json.bboxll[1][1]}`: 'not defined'}<br>
-                                                bbox (EPSG:${json.srid}): ${json.srid?`ll: ${json.bboxsrid[0][0]},${json.bboxsrid[0][1]}, tr: ${json.bboxsrid[1][0]},${json.bboxsrid[1][1]}`: 'not defined'}<br>
-                                                `
-                            })
-                        } else {
-                            response.json().then(json=>{
-                                bbox.innerHTML = `Error getting bbox: ${json.error}`;
-                            }).catch(err => {
-                                bbox.innerHTML = `Error parsing bbox: ${err}`;
-                            })
-                        }
+                } else {
+                    const li = document.createElement('li');
+                    response.json().then(json=>{
+                        li.innerHTML = `Error getting column info: ${json.error}`;
+                    }).catch(err => {
+                        li.innerHTML = `Error parsing column info: ${err}`;
                     })
-                })
+                    list.appendChild(li);
+                }
             } else {
-                const li = document.createElement('li');
                 response.json().then(json=>{
-                    li.innerHTML = `Error getting column info: ${json.error}`;
+                    bbox.innerHTML = `Error getting bbox: ${json.error}`;
                 }).catch(err => {
-                    li.innerHTML = `Error parsing column info: ${err}`;
+                    bbox.innerHTML = `Error parsing bbox: ${err}`;
                 })
-                list.appendChild(li);
             }
-        })
-        
+        } catch(err) {
+            const li = document.createElement('li');
+            li.innerHTML = `Error: ${err}`;
+            list.appendChild(li);
+        }
     }
     </script>
 </head>

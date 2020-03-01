@@ -350,8 +350,10 @@ module.exports = function(app, pool, readOnlyUser) {
     let mapping = `{'${sldlayer}':'${dblayer}'}`;
     // todo: security: reject sldlayer or dblayer that contain escape chars or quotes
     return new Promise((resolve, reject)=>{
-      exec (`python3 /home/anneb/project/sld4mvt/main.py -f getqueries -s "${fileName}" -l "${sldlayer}" -m "${mapping}"`, (err, stdout, stderr)=>{
+      let cmd = `python3 /home/anneb/project/sld4mvt/main.py -f getqueries -s "${fileName}" -l "${sldlayer}" -m "${mapping}"`;
+      exec (cmd, (err, stdout, stderr)=>{
         if (err) {
+            console.error(cmd);
             reject(err.message);
         } else {
             resolve({stdout: stdout.split('\n').filter(layer=>layer.trim()!==''), stderr: stderr});

@@ -79,7 +79,8 @@ module.exports = function(app, pool, cache) {
       return;
     }
     const cacheDir = `${req.params.datasource}/mvt/${req.params.z}/${req.params.x}/${req.params.y}`;
-    const key = ((req.query.geom_column?req.query.geom_column:'geom') + (req.query.columns?','+req.query.columns:'')) + (toBoolean(req.query.include_nulls)?'_includenulls':'')
+    const key = ((req.query.geom_column?req.query.geom_column:'geom') + (req.query.columns?','+req.query.columns:'')) + (toBoolean(req.query.include_nulls)?'_includenulls':'') + 
+        (req.query.sldtable?','+req.query.sldtable:'') + (req.query.sldlayer?','+req.query.sldlayer:'')
       .replace(/[\W]+/g, '_');
   
     const mvt = await cache.getCachedFile(cacheDir, key);
@@ -100,6 +101,24 @@ module.exports = function(app, pool, cache) {
       }
       next();
     }
+  }
+
+  let queryMap = new Map();
+
+  async function getSLDFilter(dbLayerName, sldTableName, sldLayerName, zoom) {
+    let baseKey = dbLayerName + "_" + sldTableName + "_" + sldLayerName + "_"
+    let query = queryMap.get(baseKey + zoom);
+    if (query) {
+      return query;
+    }
+    let parts = sldTableName.split('.');
+    let sql = "select z, query from $(schema:name).$(table:name) where sldlayer=$(sldlayername) and dblayer=$(dblayername) order by z";
+    let sqlParams = {schema: parts[0], table: parts[1], sldlayername: sldLayerName, dblayername: dbLayerName};
+    let result = await pool.any(sql, sqlParams);
+    for (let i = 0; i < result.length; i++) {
+      queryMap.set(baseKey + result[i].z, result[i].query);
+    }
+    return queryMap.get(baseKey + zoom);
   }
   
  /**
@@ -146,6 +165,16 @@ module.exports = function(app, pool, cache) {
  *         in: query
  *         required: false
  *         type: string
+ *       - name: sldtable
+ *         description: 'name of sld table to use for sld defined zoom-dependent queries. Also requires parameter "sldlayer".'
+ *         in: query
+ *         required: false
+ *         type: string
+ *       - name: sldlayer
+ *         description: 'name of sldlayer to use for sld defined zoom-dependent queries. Also requires parameter "sldtable".'
+ *         in: query
+ *         required: false
+ *         type: string
  *     responses:
  *       200:
  *         description: vector tile
@@ -157,6 +186,10 @@ module.exports = function(app, pool, cache) {
     app.get('/data/:datasource/mvt/:z/:x/:y', cacheMiddleWare, async (req, res)=>{
         if (!req.query.geom_column) {
             req.query.geom_column = 'geom'; // default
+        }
+        let extraSQLFilter = '';
+        if (req.query.sldtable && req.query.sldlayer) {
+          extraSQLFilter = await getSLDFilter(req.params.datasource, req.query.sldtable, req.query.sldlayer, req.params.z);
         }
         req.params.table = req.params.datasource;
         try {

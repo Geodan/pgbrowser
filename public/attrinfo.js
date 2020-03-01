@@ -57,6 +57,8 @@ function initMap(color)
     const geomType = urlParams.get('geomtype');
     const geomColumn = urlParams.get('geom_column');
     const attrName = urlParams.get("column");
+    const sldTable = urlParams.get("sldtable");
+    const sldLayer = urlParams.get("sldlayer");
     
     const mapDefinition = {
         container: 'map',
@@ -135,13 +137,17 @@ function initMap(color)
             // layerType not one of 'fill', 'line', 'circle'
             document.querySelector("#layerjson").innerHTML = `Field geom of type: '${geomType}' not supported<br>Supported types: (MULTI-) POINT/LINE/POLYGON<p>`
         } else {
+            let sldParams = ""
+            if (sldLayer && sldTable) {
+                sldParams = `&sldtable=${encodeURIComponent(sldTable)}&sldlayer=${encodeURIComponent(sldLayer)}`
+            }
             const baseUrl = new URL(`/data`, window.location.href).href;
             const layer = {
                 "id": "attrlayer",
                 "type": layerType,
                 "source": {
                     "type": "vector",
-                    "tiles": [`${baseUrl}/${fullTableName}/mvt/{z}/{x}/{y}?geom_column=${geomColumn}&columns=${attrName}&include_nulls=0`],
+                    "tiles": [`${baseUrl}/${fullTableName}/mvt/{z}/{x}/{y}?geom_column=${geomColumn}&columns=${attrName}&include_nulls=0${sldParams}`],
                 },
                 "source-layer": fullTableName,
                 "paint": paint,
