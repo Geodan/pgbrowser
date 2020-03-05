@@ -362,19 +362,19 @@ module.exports = function(app, pool, readOnlyUser) {
     })
   }
 
-  async function importSldQueries(filename, sldlayer, dblayer, queries) {
+  async function importSldQueries(filename, sldlayer, dblayer, geom, queries) {
     filenameParts = filename.split('.');
     if (filenameParts.length == 2 && filenameParts[1] === 'sld' && Array.isArray(queries) && queries.length > 0) {
       try {
         let sldTablename = `${filenameParts[0]}_sld`
-        let sql = "create table if not exists $(tablename:name) (z int, sldlayer varchar, dblayer varchar, query varchar)";
-        let sqlParams = {tablename: sldTablename, sldlayer: sldlayer, dblayer, dblayer};
+        let sql = "create table if not exists $(tablename:name) (z int, sldlayer varchar, dblayer varchar, geom varchar, query varchar)";
+        let sqlParams = {tablename: sldTablename, sldlayer: sldlayer, dblayer, dblayer, geom: geom};
         await pool.none(sql, sqlParams);
-        sql = "delete from $(tablename:name) where sldlayer=$(sldlayer) and dblayer=$(dblayer)";
+        sql = "delete from $(tablename:name) where sldlayer=$(sldlayer) and dblayer=$(dblayer) and geom=$(geom)";
         await pool.none(sql, sqlParams);
         for (let i = 0; i < queries.length; i++) {
-          sql = "insert into $(tablename:name) (z, sldlayer, dblayer, query) values ($(zoom), $(sldlayer) , $(dblayer), $(query))";
-          sqlParams = {tablename: sldTablename, zoom: i, sldlayer: sldlayer, dblayer: dblayer, query: queries[i]};
+          sql = "insert into $(tablename:name) (z, sldlayer, dblayer, geom, query) values ($(zoom), $(sldlayer) , $(dblayer), $(geom), $(query))";
+          sqlParams = {tablename: sldTablename, zoom: i, sldlayer: sldlayer, dblayer: dblayer, geom: geom, query: queries[i]};
           await pool.none(sql, sqlParams);
         }
       } catch (err) {
@@ -399,24 +399,31 @@ module.exports = function(app, pool, readOnlyUser) {
     let fileName = `${__dirname}/admin/files/${req.query.sld}`;
     let sldlayer = req.query.sldlayer;
     let dblayer = req.query.dblayer;
+    let geom = req.query.geom;
     if (typeof sldlayer === 'string') {
       sldlayer = [sldlayer];
     }
     if (typeof dblayer === 'string') {
       dblayer = [dblayer];
     }
+    if (typeof geom === 'string') {
+      geom = [geom];
+    }
     try {
+      if (!((sldlayer && dblayer && sldlayer.length === dblayer.length) && (geom && dblayer.length === geom.length))) {
+        throw "number of sldlayers, dblayers and geoms must be equal";
+      }  
       for (let i = 0; i < sldlayer.length; i++) {
         let result = await getQueriesFromSld(fileName, sldlayer[i], dblayer[i]);
         let queries = result.stdout;
-        result = await importSldQueries(req.query.sld, sldlayer[i], dblayer[i], queries);
+        result = await importSldQueries(req.query.sld, sldlayer[i], dblayer[i], geom[i], queries);
         if (!result) {          
           throw "failed to store queries in database";
         }
       }
       res.json({"result": "ok"});
     } catch(err) {
-      res.status(500).json({"result": "error", "error": err});
+      res.status(500).json({"result": "error", "error": err.message ? err.message : err});
     }
   })
 }

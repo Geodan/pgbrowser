@@ -17,7 +17,7 @@
           let sldLayerParams = Array.from(document.querySelectorAll('input[name="sldlayer"]'))
             .map(elem=>`&sldlayer=${encodeURIComponent(elem.value)}`).join('');
           let dbLayerParams = Array.from(document.querySelectorAll('select[name="dblayer"]'))
-            .map(elem=>`&dblayer=${encodeURIComponent(elem.value)}`).join('');
+            .map(elem=>`&dblayer=${encodeURIComponent(elem.value.split(' ')[0])}&geom=${encodeURIComponent(elem.value.split(' ')[1])}`).join('');
           fetch(`sldqueries?sld=${encodeURIComponent(sldFile)}${sldLayerParams}${dbLayerParams}`)
             .then(response=>{
               if (response.ok) {
@@ -58,7 +58,9 @@
           // TODO request error handling
           const urlParams = new URLSearchParams(window.location.search);
           let listdiv = document.querySelector('#layerlist');
-          let response = await fetch(`sldlayers?sld=${urlParams.get('sld')}`);
+          let sldFilename = urlParams.get('sld');
+          document.querySelector('#sldfilename').innerHTML = sldFilename;
+          let response = await fetch(`sldlayers?sld=${sldFilename}`);
           let sldLayers = [];
           if (response.ok) {
             sldLayers = await response.json();
@@ -68,7 +70,7 @@
             tables = await response.json();
             let tableOptions = tables.sort(sortTableNames)
             .map(table => {
-                return `<option>${table.f_table_schema}.${table.f_table_name}</option>`
+                return `<option>${table.f_table_schema}.${table.f_table_name} ${table.f_geometry_column}</option>`
             })
             .join('\n');
             let layerInputs = "<tr><th>SLD Layer</th><th>DB Layer</th></tr>";
@@ -79,14 +81,14 @@
         } else {
             listdiv.innerHTML = "error getting tables"
         }
-        document.querySelector('input[type=button]').value = `link ${urlParams.get('sld')}`
+        document.querySelector('input[type=button]').value = `link ${sldFilename}`
       }
     </script>
 </head>
 <body onload="updateForm()">
 
 <form id="linksld" action="linksld" method="post" encType="multipart/form-data">
-Map sld layers to data layers:<br>
+Map sld layers in <span id="sldfilename">undefined</span> to data layers:<br>
 <table id="layerlist"></table>
 <input type="button" value="link" onclick="linkSLD()"><br>
 </form>

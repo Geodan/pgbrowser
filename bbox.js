@@ -1,5 +1,7 @@
 // based on https://raw.githubusercontent.com/tobinbradley/dirt-simple-postgis-http-api/master/routes/bbox.js
 
+const infoFromSld = require('./sldtable.js');
+
 const sqlTableName = require('./utils/sqltablename.js');
 
 function splitTableName(params) {
@@ -160,6 +162,14 @@ module.exports = function(app, pool, cache) {
  *         description: invalid datasource or columnname
  */
   app.get('/api/bbox/:table', cacheMiddleware, async (req, res)=>{
+      if (req.query.sldlayer) {
+        let sldInfo = await infoFromSld(pool, req.params.table, req.query.sldlayer);
+        if (!sldInfo) {
+          return res.status(500).json({error: 'could not get sldinfo, table or layder not found?'});
+        }
+        req.query.geom_column = sldInfo.geom;
+        req.params.table = sldInfo.table;
+      }
       if (!req.query.geom_column) {
         req.query.geom_column = 'geom'; //default
       }

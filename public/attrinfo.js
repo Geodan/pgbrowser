@@ -29,6 +29,12 @@ width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 
 </rect>
 </svg>`
 
+function uuidv4() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
+  }
+  
 
 function showSpinner(){
     let mapSpinner = document.querySelector('#mapspinner');
@@ -45,7 +51,22 @@ function hideSpinner() {
 function updateLayerJsonDisplay() {
     const layerjson = map.getStyle().layers.filter(l=>l.id==='attrlayer')[0];
     layerjson.source = map.getSource(layerjson.source).serialize();
-    document.querySelector("#layerjson").innerHTML = `<pre>${JSON.stringify(layerjson, null, 2)}</pre>`;
+    layerjson.id = uuidv4();
+    let jsonString = JSON.stringify(layerjson, null, null);
+    jsonString = jsonString
+        .replace('{"id"',     '{\n    "id"')
+        .replace(',"type"',   ',\n    "type"')
+        .replace('"source":', '\n    "source":')
+        .replace('{"type"',   '{\n        "type"')
+        .replace('"tiles"',   '\n        "tiles"')
+        .replace('"bounds"',  '\n        "bounds"')
+        .replace('"source-layer"', '\n    "source-layer"')
+        .replace('"paint":{', '\n    "paint":{\n')
+        .replace(/"(.*)-color":\[/g, '    "$1-color":\[\n')
+        .replace('"case"', '        "case"')
+        .replace(/"#([0-9a-f]{6})",/g, '"#$1",\n        ')
+        .replace(/}$/, '\n}');
+    document.querySelector("#layerjson").innerHTML = `<pre>${jsonString}</pre>`;
 }
 
 let map;
@@ -57,7 +78,6 @@ function initMap(color)
     const geomType = urlParams.get('geomtype');
     const geomColumn = urlParams.get('geom_column');
     const attrName = urlParams.get("column");
-    const sldTable = urlParams.get("sldtable");
     const sldLayer = urlParams.get("sldlayer");
     
     const mapDefinition = {
@@ -138,8 +158,8 @@ function initMap(color)
             document.querySelector("#layerjson").innerHTML = `Field geom of type: '${geomType}' not supported<br>Supported types: (MULTI-) POINT/LINE/POLYGON<p>`
         } else {
             let sldParams = ""
-            if (sldLayer && sldTable) {
-                sldParams = `&sldtable=${encodeURIComponent(sldTable)}&sldlayer=${encodeURIComponent(sldLayer)}`
+            if (sldLayer) {
+                sldParams = `&sldlayer=${encodeURIComponent(sldLayer)}`
             }
             const baseUrl = new URL(`/data`, window.location.href).href;
             const layer = {
@@ -286,6 +306,7 @@ async function init() {
     const attrType = urlParams.get("columntype");
     const geomType = urlParams.get("geomtype");
     const geomColumn = urlParams.get('geom_column');
+    const sldLayer = urlParams.get('sldlayer');
     document.querySelector('#tablename').innerHTML = `Table: ${fullTableName}<br>Geometry: ${geomColumn} (${geomType})`;
     document.querySelector('#columnname').innerHTML = `Attribute: ${attrName} (${attrType})`;
     document.querySelector('#back').innerHTML = `<a href="tableinfo.html?table=${fullTableName}&geom_column=${geomColumn}">Back to layer info</a>`;
@@ -308,7 +329,8 @@ async function init() {
             break;
     }
 
-    let response = await fetch(`data/${fullTableName}/colstats/${attrName}?geom_column=${geomColumn}`);
+    let sldParams = sldLayer?`&sldlayer=${sldLayer}`:'';
+    let response = await fetch(`data/${fullTableName}/colstats/${attrName}?geom_column=${geomColumn}${sldParams}`);
 
     const loadingElement = document.querySelector('#loader');
     loadingElement.innerHTML = "";
