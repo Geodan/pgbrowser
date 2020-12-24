@@ -1,0 +1,18 @@
+#dragtree {
+}
+
+#dragtree div {
+    margin-left: 15px;
+    display: block;
+}
+#toolbar {
+    
+}
+#toolbar > div {
+    cursor: move;
+    position: relative;
+    border: 1px solid red;
+}
+.title {
+    font-weight: bold;
+}
