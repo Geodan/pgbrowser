@@ -1,4 +1,5 @@
 const sqlTableName = require('./utils/sqltablename.js');
+const infoFromSld = require('./sldtable.js')
 
 // get top 100 most frequent values and null values
 const sql = (params, query) => {
@@ -178,6 +179,15 @@ module.exports = function(app, pool, cache) {
     app.get('/data/:table/colstats/:column', cacheMiddleWare, async (req, res)=>{
         if (!req.query.geom_column) {
             req.query.geom_column = 'geom'; // default
+        }
+        if (req.query.sldlayer) {
+          let sldInfo = await infoFromSld(pool, req.params.table, req.query.sldlayer, 0);
+          if (sldInfo) {
+            req.params.table = sldInfo.table;
+            req.query.geom_column = sldInfo.geom;
+          } else {
+            return res.status(406).json({error: "no sld info, sld-table or sld-layer does not exist?"})
+          }
         }
         let sqlString = sql(req.params, req.query);
         //console.log(sqlString);

@@ -50,6 +50,19 @@ const sql = () => {
 `;
   }
 
+const getAllSLDTablesSql = `select  n.nspname namespace, relname tablename
+ FROM pg_class c
+       JOIN pg_attribute a ON a.attrelid = c.oid AND NOT a.attisdropped
+       JOIN pg_namespace n ON c.relnamespace = n.oid
+       JOIN pg_type t ON a.atttypid = t.oid
+  where (c.relkind = ANY (ARRAY['r'::"char", 'v'::"char", 'm'::"char", 'f'::"char", 'p'::"char"]))
+    and c.relname like '%_sld'
+  and a.attname='dblayer'
+  and t.typname='varchar'
+  AND NOT pg_is_other_temp_schema(c.relnamespace) 
+  AND has_table_privilege(c.oid, 'SELECT'::text)`;
+  
+
 
 
   module.exports = function(app, pool) {
@@ -105,6 +118,37 @@ const sql = () => {
             let sqlString = sql()
             let result = await pool.query(sqlString);
             let layers = result
+            let sldTables = await pool.query(getAllSLDTablesSql);
+            let newLayers = [];
+            for (let sldTable of sldTables) {
+              let sql = 'select distinct sldlayer, dblayer, geom from $(namespace:name).$(tablename:name)';
+              let sqlParams = {namespace: sldTable.namespace, tablename: sldTable.tablename};
+              let sldLayers = await pool.any(sql, sqlParams);
+              for (sldLayer of sldLayers) {
+                let parts = sldLayer.dblayer.split('.');
+                if (parts.length < 2) {
+                  parts.shift('public');
+                };
+                let knownLayers = layers.filter(layer=>layer.f_table_schema == parts[0] && layer.f_table_name == parts[1] && layer.f_geometry_column == sldLayer.geom);
+                if (knownLayers.length) {
+                  newLayers.push({
+                    f_table_catalog: knownLayers[0].f_table_catalog,
+                    f_table_schema: sldTable.namespace,
+                    f_table_name: sldTable.tablename,
+                    f_geometry_column: sldLayer.geom,
+                    coord_dimension: knownLayers[0].coord_dimension,
+                    srid: knownLayers[0].srid,
+                    type: knownLayers[0].type,
+                    estimated_rows: knownLayers[0].estimated_rows,
+                    table_type: 'sld',
+                    sld_layername: sldLayer.sldlayer
+                  })
+                }
+              }              
+            }
+            if (newLayers.length) {
+              layers = layers.concat(newLayers);
+            }
             res.json(layers)
         } catch(err) {
             res.status(500).json({error: err.message})

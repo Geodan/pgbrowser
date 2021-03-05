@@ -1,11 +1,23 @@
 // based on https://raw.githubusercontent.com/tobinbradley/dirt-simple-postgis-http-api/master/routes/mvt.js
 const sqlTableName = require('./utils/sqltablename.js');
-const dbutils = require('./utils/dbutils.js');
+const infoFromSld = require('./sldtable');
 
 const sm = require('@mapbox/sphericalmercator');
 const merc = new sm({
   size: 256
 })
+
+function splitSchemaTable (tablename) {
+  let parts = tablename.split('.');
+  if (parts.length === 1) {
+      parts.unshift ("public");
+  }
+  return {
+      schema: parts[0],
+      name: parts[1],
+      fullname: parts.join('.')
+  }
+}
 
 function toBoolean(value) {
   if (!value) {
@@ -44,7 +56,7 @@ function queryColumnsNotNull(query) {
   return ''
 }
 
-  let sql = (query) => {
+  let sql = (query, extraSQLFilter) => {
     return `
     SELECT ST_AsMVT(q, $(table.fullname), 4096, 'geom')
     FROM 
@@ -66,7 +78,8 @@ function queryColumnsNotNull(query) {
               srid
             ) && $(geomcolumn:name)
             ${queryColumnsNotNull(query)}
-      ) r order by random() limit 10000
+            ${extraSQLFilter && extraSQLFilter!==''?` AND ${extraSQLFilter}`: ''}
+      ) r order by random() limit 100000
     ) q
     `
   }
@@ -101,24 +114,6 @@ module.exports = function(app, pool, cache) {
       }
       next();
     }
-  }
-
-  let queryMap = new Map();
-
-  async function getSLDFilter(dbLayerName, sldTableName, sldLayerName, zoom) {
-    let baseKey = dbLayerName + "_" + sldTableName + "_" + sldLayerName + "_"
-    let query = queryMap.get(baseKey + zoom);
-    if (query) {
-      return query;
-    }
-    let parts = sldTableName.split('.');
-    let sql = "select z, query from $(schema:name).$(table:name) where sldlayer=$(sldlayername) and dblayer=$(dblayername) order by z";
-    let sqlParams = {schema: parts[0], table: parts[1], sldlayername: sldLayerName, dblayername: dbLayerName};
-    let result = await pool.any(sql, sqlParams);
-    for (let i = 0; i < result.length; i++) {
-      queryMap.set(baseKey + result[i].z, result[i].query);
-    }
-    return queryMap.get(baseKey + zoom);
   }
   
  /**
@@ -187,16 +182,24 @@ module.exports = function(app, pool, cache) {
         if (!req.query.geom_column) {
             req.query.geom_column = 'geom'; // default
         }
-        let extraSQLFilter = '';
-        if (req.query.sldtable && req.query.sldlayer) {
-          extraSQLFilter = await getSLDFilter(req.params.datasource, req.query.sldtable, req.query.sldlayer, req.params.z);
-        }
         req.params.table = req.params.datasource;
+        let extraSQLFilter = '';
+        if (req.query.sldlayer) {
+          let sldInfo = await infoFromSld(pool, req.params.datasource, req.query.sldlayer, req.params.z);
+          if (!sldInfo){
+              res.status(500);
+              return res.json({error:"no data from sld, sld file or sld layer not found?"})
+          }
+          req.query.geom_column = sldInfo.geom;
+          extraSQLFilter = sldInfo.where;
+          req.params.table = sldInfo.table;
+        }
+        
         try {
             let bounds = merc.bbox(req.params.x, req.params.y, req.params.z, false, '900913');
-            let sqlString = sql(req.query);
+            let sqlString = sql(req.query, extraSQLFilter);
             let sqlParams = {
-              table: dbutils.splitSchemaTable(req.params.table),
+              table: splitSchemaTable(req.params.table),
               columns: req.query.columns.split(','),
               geomcolumn: req.query.geom_column,
               bounds: bounds,
@@ -205,6 +208,10 @@ module.exports = function(app, pool, cache) {
               bounds2: bounds[2],
               bounds3: bounds[3]
             };
+            if (req.query.sldlayer) {
+              // override mvt sourcelayername to sldlayer
+              sqlParams.table.fullname = req.params.datasource;
+            }
             req.query.columns.split(',').forEach((column, index)=>{
               sqlParams[`column${index}`] = column;
             })
@@ -262,7 +269,7 @@ module.exports = function(app, pool, cache) {
           let bounds = merc.bbox(req.params.x, req.params.y, req.params.z, false, '900913');
           let sqlString = sql(req.query);
           let sqlParams = {
-            table: dbutils.splitSchemaTable(req.params.table),
+            table: splitSchemaTable(req.params.table),
             columns: req.query.columns.split(','),
             geomcolumn: req.query.geom_column,
             bounds: bounds,

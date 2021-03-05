@@ -1,3 +1,5 @@
+const infoFromSld = require('./sldtable.js');
+
 const sql = (params) => {
     return `
     SELECT 
@@ -42,7 +44,14 @@ module.exports = function (app, pool) {
  */
   app.get('/data/layer_columns/:table', async (req, res)=> {
     let tableName, schemaName;
-    const table = req.params.table;
+    let table = req.params.table;
+    if (req.query.sldlayer) {
+      let sldInfo = await infoFromSld(pool, table, req.query.sldlayer);
+      if (!sldInfo) {
+        return res.status(500).json({"error": "no sld info found, sld table or layer name not found?"});
+      }
+      table = sldInfo.table;
+    }
     if (table) {
       const parts = table.split('.');
       if (parts.length === 1) {
