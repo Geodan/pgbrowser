@@ -114,19 +114,19 @@
         document.location = `linksld.html?sld=${encodeURI(filename)}`
     }
 
-    function importFile(filename) {
+    function importFile(filename, layername) {
         let importersult = document.querySelector('#importresult');
         const startTime = new Date();
         let loop = true;
         function updateElapsedTime() {
             if (loop) {
                 const secondsElapsed = Math.round((new Date() - startTime) / 1000);
-                importersult.innerHTML = `Importing ${filename} ... (${secondsElapsed})`;            
+                importersult.innerHTML = `Importing ${layername?layername:filename} ... (${secondsElapsed})`;            
                 setTimeout(updateElapsedTime, 1000);
             }
         }
         updateElapsedTime();
-        fetch(`import?file=${filename}`).then(response=>{
+        fetch(`import?file=${filename}&layer=${layername?layername:''}`).then(response=>{
             loop = false;
             if (!response.ok) {
                 importersult.innerHTML = response.responseText;
@@ -147,7 +147,7 @@
     }
 
     function mayImport(fullPath) {
-        const excludeArray = ['txt','html','htm','cpg','shx','prj','ini','changelog','version','license','ds_store','readme','zip','xsd','exe','bat','msi','sh','bin','so']
+        const excludeArray = ['txt','html','htm','cpg','shx','prj','ini','changelog','version','license','ds_store','readme','zip','xsd','exe','bat','msi','sh','bin','so','pdf','doc','docx']
         let extension = fullPath.split('/').pop().split('.').pop();
         if (extension) {
             return !excludeArray.includes(extension.toLowerCase());
@@ -160,8 +160,14 @@
         if (sldImport(fullPath)) {
             return `<tr><td><a href="#" onclick="LinkSld('${fullPath}')">link</a></td><td><a href="#" onclick="deleteFile('${fullPath}')">delete</a></td><td>${fileItem.permissions}</td><td>${byteString(fileItem.size,1)}</td><td>${fileItem.name}</td></tr>\n`
         }
+        if (fileItem.layers && fileItem.layers.length) {
+            return `<tr><td>-</td><td><a href="#" onclick="deleteFile('${fullPath}')">delete</a></td><td>${fileItem.permissions}</td><td>${byteString(fileItem.size,1)}</td><td>${fileItem.name}</td></tr>
+            ${fileItem.layers.map(layer=>{
+                return `<tr><td><a href="#" onclick="${`importFile('${fullPath}','${layer.name}')`}">import</a></td><td></td><td>layer</td><td>${layer.type}</td><td>${layer.name}</td></tr>`
+            }).join('\n')}\n`
+        }
         if (mayImport(fullPath)) {
-            return `<tr><td><a href="#" onclick="${fileItem.dir?`updateFileList('${fullPath}')`:`importFile('${fullPath}')`}">${fileItem.dir?"open":"import"}</a></td><td><a href="#" onclick="deleteFile('${fullPath}')">delete</a></td><td>${fileItem.permissions}</td><td>${byteString(fileItem.size,1)}</td><td>${fileItem.name}</td></tr>\n`    
+            return `<tr><td><a href="#" onclick="${fileItem.dir?`updateFileList('${fullPath}')`:`importFile('${fullPath}')`}">${fileItem.dir?"open":"import"}</a></td><td><a href="#" onclick="deleteFile('${fullPath}')">delete</a></td><td>${fileItem.permissions}</td><td>${byteString(fileItem.size,1)}</td><td>${fileItem.name}</td></tr>\n`
         }
         if (fileItem.dir) {
             return `<tr><td><a href="#" onclick="updateFileList('${fullPath}')">open</a></td><td><a href="#" onclick="deleteFile('${fullPath}')">delete</a></td><td>${fileItem.permissions}</td><td>${byteString(fileItem.size,1)}</td><td>${fileItem.name}</td></tr>\n`
