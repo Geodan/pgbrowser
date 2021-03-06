@@ -282,11 +282,8 @@ module.exports = function(app, pool, readOnlyUser) {
   })
 
   function ogr2ogr(fileName, layerName, schemaName, tableName, pool) {
-    if (layerName && layerName.trim()==='') {
-      layerName = false;
-    }
     return new Promise((resolve, reject)=>{
-      exec (`ogr2ogr -f "PostgreSQL" PG:"host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432} sslmode=${pool.$cn.ssl?'require':'allow'}" -nlt PROMOTE_TO_MULTI -overwrite -lco GEOMETRY_NAME=geom -lco precision=NO -nln ${schemaName}.${layerName?layerName:tableName} "${fileName}"${layerName?` "${layerName}"`:''}`, (err, stdout, stderr)=>{
+      exec (`ogr2ogr -f "PostgreSQL" PG:"host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432} sslmode=${pool.$cn.ssl?'require':'allow'}" -nlt PROMOTE_TO_MULTI -overwrite -lco GEOMETRY_NAME=geom -lco precision=NO -nln ${schemaName}.${tableName} "${fileName}"${layerName?` "${layerName}"`:''}`, (err, stdout, stderr)=>{
         if (err) {
             reject(err.message.replace(/password=[^\s]*/g, 'password=xxxx'));
         } else {
@@ -354,11 +351,16 @@ module.exports = function(app, pool, readOnlyUser) {
       return;
     }
     let schemaName = req.query.schema ? req.query.schema : schemaInfo.default;
-    schemaName = schemaName.toLowerCase().trim().replace(/\./g, '_'.replace(/ /g,'_'));
-    let tableName = path.parse(req.query.file).name.toLowerCase();
-    tableName = tableName.replace(/\./g, '_').replace(/ /g, '_');
+    schemaName = schemaName.toLowerCase().trim().replace(/[\W]+/g, '_');
+    let tableName = path.parse(req.query.file).name.toLowerCase().replace(/[\W]+/g, '_');
     let fileName = `${__dirname}/admin/files/${req.query.file}`;
     let layername = req.query.layer;
+    if (layername && layername.trim() === '') {
+      layername = false;
+    }
+    if (layername) {
+      tableName = layername.toLowerCase().replace(/[\W]+/g, '_');
+    }
     importBusyMessage = `import ${req.query.file} to ${schemaName}.${tableName}`;
     ogr2ogr(fileName, layername, schemaName, tableName, pool)
       .then((io)=>{
