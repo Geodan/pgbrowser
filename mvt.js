@@ -60,13 +60,13 @@ function queryColumnsNotNull(query) {
     return `
     SELECT ST_AsMVT(q, $(table.fullname), 4096, 'geom')
     FROM 
-      (SELECT  $(columns:name),
+      (SELECT  ${`${(query.columns && query.columns !== '')?'$(columns:name),':''}`}
         ST_AsMVTGeom(
           ST_Transform($(geomcolumn:name), 3857),
           ST_MakeBox2D(ST_Point($(bounds0), $(bounds1)), ST_Point($(bounds2), $(bounds3)))
         ) geom
       FROM 
-        (SELECT $(columns:name), $(geomcolumn:name), srid
+        (SELECT ${`${(query.columns && query.columns !== '')?'$(columns:name),':''}`} $(geomcolumn:name), srid
           FROM 
             $(table.schema:name).$(table.name:name),
             (SELECT ST_SRID($(geomcolumn:name)) AS srid FROM $(table.schema:name).$(table.name:name)
@@ -212,9 +212,11 @@ module.exports = function(app, pool, cache) {
               // override mvt sourcelayername to sldlayer
               sqlParams.table.fullname = req.params.datasource;
             }
-            req.query.columns.split(',').forEach((column, index)=>{
-              sqlParams[`column${index}`] = column;
-            })
+            if (req.query) {
+              req.query.columns.split(',').forEach((column, index)=>{
+                sqlParams[`column${index}`] = column;
+              })
+            }
             const result = await pool.one(sqlString, sqlParams);
             const mvt = result.st_asmvt
             if (mvt.length === 0) {
