@@ -60,6 +60,7 @@ function queryColumnsNotNull(query) {
     return `
     SELECT ST_AsMVT(q, $(table.fullname), 4096, 'geom')
     FROM 
+     (SELECT * FROM
       (SELECT  ${`${(query.columns && query.columns !== '')?'$(columns:name),':''}`}
         ST_AsMVTGeom(
           ST_Transform($(geomcolumn:name), 3857),
@@ -80,6 +81,7 @@ function queryColumnsNotNull(query) {
             ${queryColumnsNotNull(query)}
             ${extraSQLFilter && extraSQLFilter!==''?` AND ${extraSQLFilter}`: ''}
       ) r order by random() limit 100000
+     ) t ${query.columns && query.columns !== ''?` ORDER by $(sortcolumn:name) desc`:''} 
     ) q
     `
   }
@@ -206,7 +208,8 @@ module.exports = function(app, pool, cache) {
               bounds0: bounds[0],
               bounds1: bounds[1],
               bounds2: bounds[2],
-              bounds3: bounds[3]
+              bounds3: bounds[3],
+              sortcolumn: req.query.columns.split(',')[0]
             };
             if (req.query.sldlayer) {
               // override mvt sourcelayername to sldlayer
