@@ -1,7 +1,23 @@
+.header::before {
+    content: "+ ";
+}
+.header.active::before {
+    content: "- ";
+}
+
+.collapsible {
+    display: none;
+    overflow: hidden;
+    padding-left: 15px;
+}
+.collapsible.active {
+    display: block;
+}
+
 #dragtree {
 }
 
-#dragtree div {
+.header {
     margin-left: 15px;
     display: block;
 }
@@ -11,8 +27,12 @@
 #toolbar > div {
     cursor: move;
     position: relative;
-    border: 1px solid red;
 }
 .title {
     font-weight: bold;
+}
+
+#mapmap {
+    width: 400px;
+    height: 400px;
 }

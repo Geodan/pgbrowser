@@ -1,5 +1,36 @@
 'use strict';
 
+const mapDefinition = {
+    container: 'mapmap',
+    "style": {
+        "version": 8,
+        "name": "DefaultBaseStyle",
+        "id": "defaultbasestyle",
+        "glyphs": `https://free.tilehosting.com/fonts/{fontstack}/{range}.pbf?key=`,
+        "sources": {
+            "osmgray": {
+                "type":"raster",
+                "tileSize":256,
+                "tiles":[
+                    "https://tiles.edugis.nl/mapproxy/osm/tiles/osmgrayscale_EPSG900913/{z}/{x}/{y}.png?origin=nw"
+                ],
+                "attribution":"&copy; <a href=\"https://www.openstreetmap.org/about\" target=\"copyright\">OpenStreetMap contributors</a>",
+                "maxzoom":19
+            }
+        },
+        "layers": [
+            {
+                "id": "osmgray",
+                "type": "raster",
+                "source": "osmgray"
+            }
+        ]
+    }
+}
+
+let map;
+
+
 function dragElement(elmnt) {
   var deltaX = 0, deltaY = 0, 
       dragStartX = 0, dragStartY = 0;
@@ -79,6 +110,10 @@ function dragElement(elmnt) {
         prevHoveredSibling.style['border-top'] = '';
         prevHoveredSibling.style['border-bottom'] = '';
         prevHoveredSibling = undefined;
+    } else {
+        // reset to original
+        elmnt.style.top = elmnt.style.left = '';
+        deltaX = deltaY = 0;
     }
   }
 }
@@ -86,7 +121,7 @@ function dragElement(elmnt) {
 function findHoveredSibling(element) {
     let elementClientRect = element.getBoundingClientRect();
     let siblings = Array.from(element.parentElement.children)
-        .filter(sibling=>sibling.tagName === 'DIV')
+        .filter(sibling=>sibling.classList.contains('header'))
         .filter(sibling=>sibling!==element)
         .filter(sibling=>{
             let siblingClientRect = sibling.getBoundingClientRect();
@@ -102,8 +137,37 @@ function findHoveredSibling(element) {
     return undefined;
 }
 
+function clickHeader(event) {
+    let element = event.currentTarget;
+    if (event.target === event.currentTarget || event.target.classList.contains("title")) {
+        element.classList.toggle('active');
+        let collapsible = element.querySelector(':scope > .collapsible');
+        if (collapsible) {
+            collapsible.classList.toggle('active');
+        }
+        if (element.id === 'map') {
+            if (!map) {
+                map = new mapboxgl.Map(mapDefinition);
+                map.resize();
+                map.on("moveend", () => {
+                    document.querySelector('#mapcenterlng').value = map.getCenter().lng;
+                    document.querySelector('#mapcenterlat').value = map.getCenter().lat;
+                    document.querySelector('#mapzoom').value = map.getZoom();
+                    document.querySelector('#mappitch').value = map.getPitch();
+                    document.querySelector('#mapbearing').value = map.getBearing();
+                })
+            }
+        }
+    }
+    event.stopPropagation();
+}
 
 async function init() {
+    let headers = document.querySelectorAll('.header');
+    for (let header of headers) {
+        header.onclick = clickHeader
+    }
+
     let draggableTools = document.querySelectorAll("#toolbar > div");
     draggableTools.forEach(tool => {
         dragElement(tool)

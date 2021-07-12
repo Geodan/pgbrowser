@@ -4,7 +4,7 @@
   "description": "PGserver receives, converts and serves geo-data between postgis and http-clients.",
   "main": "pgserver.js",
   "scripts": {
-    "start": "node pgserver.js",
+    "start": "npx nodemon pgserver.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "cd public && npm install"
   },
@@ -21,5 +21,8 @@
     "pg-promise": "^10.10.2",
     "swagger-jsdoc": "^3.4.0",
     "swagger-ui-express": "^4.0.7"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
   }
 }

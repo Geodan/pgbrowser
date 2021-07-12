@@ -497,7 +497,11 @@ async function tableStats(pool, fullTableName, defaultSchema) {
     SELECT
       count(*)::integer, ${fieldInfo.filter(row=>row.field_type!=='geometry').map(row=>{
         let nm = row.field_name;
-        return `min("${nm}") "${nm}_min", max("${nm}") "${nm}_max", count("${nm}")::integer "${nm}_count", count(distinct "${nm}")::integer "${nm}_dcount"`
+        if (row.field_type === 'bool') {
+          return `count("${nm}")::integer "${nm}_count", count(distinct "${nm}")::integer "${nm}_dcount"`
+        } else {
+          return `min("${nm}") "${nm}_min", max("${nm}") "${nm}_max", count("${nm}")::integer "${nm}_count", count(distinct "${nm}")::integer "${nm}_dcount"`
+        }
       }).join(',')}
     FROM
       ${fullTableName}
