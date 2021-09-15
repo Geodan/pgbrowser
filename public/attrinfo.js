@@ -167,7 +167,7 @@ function initMap(color)
                 "type": layerType,
                 "source": {
                     "type": "vector",
-                    "tiles": [`${baseUrl}/${fullTableName}/mvt/{z}/{x}/{y}?geom_column=${geomColumn}&columns=${attrName}&include_nulls=0${sldParams}`],
+                    "tiles": [`${baseUrl}/${fullTableName}/mvt/{z}/{x}/{y}?geom_column=${encodeURIComponent(geomColumn)}&columns=${encodeURIComponent(attrName)}&include_nulls=0${sldParams}`],
                 },
                 "source-layer": fullTableName,
                 "paint": paint,
@@ -330,7 +330,7 @@ async function init() {
     }
 
     let sldParams = sldLayer?`&sldlayer=${sldLayer}`:'';
-    let response = await fetch(`data/${fullTableName}/colstats/${attrName}?geom_column=${geomColumn}${sldParams}`);
+    let response = await fetch(`data/${fullTableName}/colstats/${encodeURIComponent(attrName)}?geom_column=${encodeURIComponent(geomColumn)}${sldParams}`);
 
     const loadingElement = document.querySelector('#loader');
     loadingElement.innerHTML = "";
