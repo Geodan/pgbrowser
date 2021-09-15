@@ -283,7 +283,7 @@ module.exports = function(app, pool, readOnlyUser) {
 
   function ogr2ogr(fileName, layerName, schemaName, tableName, pool) {
     return new Promise((resolve, reject)=>{
-      exec (`ogr2ogr -f "PostgreSQL" PG:"host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432} sslmode=${pool.$cn.ssl?'require':'allow'}" -nlt PROMOTE_TO_MULTI -overwrite -lco GEOMETRY_NAME=geom -lco precision=NO -nln ${schemaName}.${tableName} "${fileName}"${layerName?` "${layerName}"`:''}`, (err, stdout, stderr)=>{
+      exec (`ogr2ogr -f "PostgreSQL" PG:"host=${pool.$cn.host} user=${pool.$cn.user} dbname=${pool.$cn.database} password=${pool.$cn.password} port=${pool.$cn.port?pool.$cn.port:5432} sslmode=${pool.$cn.ssl?'require':'allow'}" -nlt PROMOTE_TO_MULTI -overwrite -wrapdateline  -lco GEOMETRY_NAME=geom -lco precision=NO -nln ${schemaName}.${tableName} "${fileName}"${layerName?` "${layerName}"`:''}`, (err, stdout, stderr)=>{
         if (err) {
             reject(err.message.replace(/password=[^\s]*/g, 'password=xxxx'));
         } else {
