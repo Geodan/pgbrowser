@@ -7,14 +7,29 @@
     <title>Cleaunup</title>
     <link href="pgserver.css" rel="stylesheet">
     <script>
-        function loadTableList() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tableName = urlParams.get('table');
 
+        function showCacheInfo(message) {
+            const cacheMessageELement = document.querySelector('#clearcache');
+            cacheMessageELement.innerHTML = message;
         }
+
+        (async function clearCache() {
+            let response = await fetch(`../clearcache/${tableName}`);
+            if (!response.ok) {
+                const json = await response.json();
+                showCacheInfo(`Fetch error: ${response.status}, ${json.error}`);
+            } else {
+                const json = await response.json();
+                showCacheInfo(json.message)
+            }
+        })();
     </script>
     
 </head>
-<body onload="loadTableList()">
+<body>
 Clean up
-<div id="tablelist"></div>
+<div id="clearcache">Clearing cache...</div>
 </body>
 </html>

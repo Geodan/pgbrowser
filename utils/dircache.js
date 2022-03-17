@@ -57,6 +57,32 @@ module.exports = class DirCache {
       })
     })
   }
+  clearCache(dir) {
+    const dirName = path.join(this.cacheRoot, dir);
+    return new Promise((resolve, reject) => {
+      if (!dir || dir.trim() === '') {
+        reject(new Error('clearCache: no table name provided'));
+        return;
+      }
+      fs.lstat (dirName, (err, stats)=> {
+        if (err) {
+          reject(err);
+          return;
+        } 
+        if (!stats.isDirectory()) {
+          reject(new Error(`clearCache: cache '${dirName}' is not a directory`));
+          return;
+        }
+        fs.rmdir(dirName, {recursive: true, force: true}, (err)=> {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        })
+      })
+    })
+  }
 }
 
 function cacheDirName(params) {
@@ -145,4 +171,3 @@ async function waitForCache(params, query) {
   console.log(`cache wait failed`);
   return null;
 }
-  
