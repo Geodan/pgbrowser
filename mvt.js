@@ -243,6 +243,74 @@ module.exports = function(app, pool, cache) {
             res.status(status).json({error:err.message})
         }
     })
+
+
+
+    /**
+ * @swagger
+ *
+ * /data/{datasource}/{z}/{x}/{y}:
+ *   get:
+ *     description: get mapbox vector tile (mvt) from database function
+ *     tags: ['geodata']
+ *     produces:
+ *       - application/x-protobuf
+ *     parameters:
+ *       - name: datasource
+ *         description: name of custom mvt function in db
+ *         in: path
+ *         required: true
+ *         type: string
+ *       - name: z
+ *         description: zoom level of tile
+ *         in: path
+ *         required: true
+ *         type: number
+ *       - name: x
+ *         description: x value (column number) of tile
+ *         in: path
+ *         required: true
+ *         type: number
+ *       - name: y
+ *         description: y value (row number) of tile
+ *         in: path
+ *         required: true
+ *         type: number
+ *     responses:
+ *       200:
+ *         description: vector tile
+ *       204:
+ *         description: no data (empty tile)
+ *       422:
+ *         description: invalid datasource or columnname
+ */
+    app.get('/data/:datasource/:z/:x/:y', cacheMiddleWare, async (req, res)=>{
+      try {
+        const schemaTable = splitSchemaTable(req.params.datasource);
+        let sqlString = 'select * from $(schema:name).$(table:name)($(z),$(x),$(y))';
+        const mvt = await pool.one(sqlString, {schema: schemaTable.schema, table: schemaTable.name, z: parseInt(req.params.z), x: parseInt(req.params.x), y: parseInt(req.params.y)});
+        if (mvt.length === 0) {
+          res.status(204)
+        }
+        res.header('Content-Type', 'application/x-protobuf').send(mvt.mvt);
+      } catch(err) {
+        console.log(err);
+        let status = 500;
+        switch (err.code) {
+          case '42P01':
+            // table does not exist
+            status = 422;
+            break;
+          case '42703':
+            // column does not exist
+            status = 422;
+            break;
+          default:
+        }
+        res.status(status).json({error:err.message})
+      }
+    });
+
     app.get('/data/:datasource/sldmvt/:z/:x/:y', cacheMiddleWare, async (req, res)=>{
       if (!req.query.geom_column) {
           req.query.geom_column = 'geom'; // default
