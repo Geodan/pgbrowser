@@ -177,33 +177,35 @@ module.exports = function(app, pool, readOnlyUser) {
 
 
   app.post('/admin/upload', async (req, res) => {
-    let uploadFile = req.files.uploadfile;
-    const fileName = uploadFile.name;
-    if (!fileName || fileName === "" || fileName.toLowerCase().trim() === ".gitignore" ) {
-      return res.json({file: "none"});
-    }
-    let dest = `${__dirname}/admin/files/${fileName}`;
-    try {
-      await (rmr(dest));
-    } catch (err) {
-      // ignore
-    }
-    uploadFile.mv(
-      dest,
-      async function (err) {
-        if (err) {
-          return res.status(500).send(err.message);
-        }
-        try {
-          await unArchiveFile(`${__dirname}/admin/files/${fileName}`);
-        } catch (err) {
-          // ignore
-        }
-        res.json({
-          file: `${fileName}`
-        })    
+    if (req.files) {
+      let uploadFile = req.files.uploadfile;
+      const fileName = uploadFile.name;
+      if (!fileName || fileName === "" || fileName.toLowerCase().trim() === ".gitignore" ) {
+        return res.json({file: "none"});
       }
-    )
+      let dest = `${__dirname}/admin/files/${fileName}`;
+      try {
+        await (rmr(dest));
+      } catch (err) {
+        // ignore
+      }
+      uploadFile.mv(
+        dest,
+        async function (err) {
+          if (err) {
+            return res.status(500).send(err.message);
+          }
+          try {
+            await unArchiveFile(`${__dirname}/admin/files/${fileName}`);
+          } catch (err) {
+            // ignore
+          }
+          res.json({
+            file: `${fileName}`
+          })    
+        }
+      )
+    }
   });
   
   app.get('/admin/upload', (req, res) =>{
