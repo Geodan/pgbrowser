@@ -342,9 +342,10 @@ module.exports = function(app, pool, readOnlyUser) {
     return;
   }
 
-  const setCommentOnTable = async (schemaName, tableName, filename, layername) => {
+  const setCommentOnTable = async (pool, schemaName, tableName, filename, layername) => {
     // set  comment text to document filename and layername and date of import
-    let comment = `imported from ${filename} ${layername?'layer '+layername:''} on ${new Date().toISOString()}`;
+    filename = filename.slice(__dirname.length + 13); // remove absolute path to admin/files
+    let comment = `imported from ${filename} ${layername?'layer '+layername:''} on ${new Date().toISOString()} with ogr2ogr and pgbrowser`;
     let sql = `comment on table $(schemaName:name).$(tableName:name) is $(comment)`;
     try {
       await pool.none(sql, {schemaName: schemaName, tableName: tableName, comment: comment});
@@ -377,7 +378,7 @@ module.exports = function(app, pool, readOnlyUser) {
     importBusyMessage = `import ${req.query.file} to ${schemaName}.${tableName}`;
     ogr2ogr(fileName, layername, schemaName, tableName, pool)
       .then((io)=>{
-        setCommentOnTable(pool, schemaName, tableName, filename, layername);
+        setCommentOnTable(pool, schemaName, tableName, fileName, layername);
         res.json({result: "ok", table: `${schemaName}.${tableName}`, io: io});
         autoCleanUp(schemaName, tableName, 'geom');
         rmr(`${__dirname}/cache/${pool.$cn.database}/${schemaName}.${tableName}`).catch(err=>{});
