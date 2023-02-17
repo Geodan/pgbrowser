@@ -11,7 +11,7 @@ const sql = () => {
     COALESCE(NULLIF(postgis_typmod_srid(a.atttypmod), 0), sr.srid, 0) AS srid,
     replace(replace(COALESCE(NULLIF(upper(postgis_typmod_type(a.atttypmod)), 'GEOMETRY'::text), st.type, 'GEOMETRY'::text), 'ZM'::text, ''::text), 'Z'::text, ''::text)::character varying(30) AS type,
     ((c.reltuples/case when c.relpages=0 then 1 else c.relpages end) * (pg_relation_size(c.oid) / (current_setting('block_size')::integer)))::bigint as estimated_rows,
-    case when relkind='r' then 'table' when relkind='v' then 'view' when relkind='m' then 'mview' when relkind='f' then 'ftable' else 'other(' || relkind || ')' end table_type
+    case when relkind='r' then 'table' when relkind='v' then 'view' when relkind='m' then 'mview' when relkind='f' then 'ftable' else 'other(' || relkind::text || ')' end table_type
   FROM pg_class c
     JOIN pg_attribute a ON a.attrelid = c.oid AND NOT a.attisdropped
     JOIN pg_namespace n ON c.relnamespace = n.oid
