@@ -346,7 +346,11 @@ module.exports = function(app, pool, readOnlyUser) {
     // set  comment text to document filename and layername and date of import
     let comment = `imported from ${filename} ${layername?'layer '+layername:''} on ${new Date().toISOString()}`;
     let sql = `comment on table $(schemaName:name).$(tableName:name) is $(comment)`;
-    await pool.none(sql, {schemaName: schemaName, tableName: tableName, comment: comment});
+    try {
+      await pool.none(sql, {schemaName: schemaName, tableName: tableName, comment: comment});
+    } catch (e) {
+      console.log(`Error while setting comment: ${e.message}, sql: ${sql}`);
+    }
   }
 
   app.get('/admin/import', (req, res)=>{
