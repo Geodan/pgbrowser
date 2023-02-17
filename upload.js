@@ -377,10 +377,10 @@ module.exports = function(app, pool, readOnlyUser) {
     importBusyMessage = `import ${req.query.file} to ${schemaName}.${tableName}`;
     ogr2ogr(fileName, layername, schemaName, tableName, pool)
       .then((io)=>{
+        setCommentOnTable(pool, schemaName, tableName, filename, layername);
         res.json({result: "ok", table: `${schemaName}.${tableName}`, io: io});
         autoCleanUp(schemaName, tableName, 'geom');
         rmr(`${__dirname}/cache/${pool.$cn.database}/${schemaName}.${tableName}`).catch(err=>{});
-        setCommentOnTable(pool, schemaName, tableName, filename, layername);
       })
       .catch((err)=> {
         res.json({error: err});
