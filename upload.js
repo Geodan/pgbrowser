@@ -342,6 +342,13 @@ module.exports = function(app, pool, readOnlyUser) {
     return;
   }
 
+  const setCommentOnTable = async (schemaName, tableName, filename, layername) => {
+    // set  comment text to document filename and layername and date of import
+    let comment = `imported from ${filename} ${layername?'layer '+layername:''} on ${new Date().toISOString()}`;
+    let sql = `comment on table $(schemaName:name).$(tableName:name) is $(comment)`;
+    await pool.none(sql, {schemaName: schemaName, tableName: tableName, comment: comment});
+  }
+
   app.get('/admin/import', (req, res)=>{
     if (!schemaInfo.default) {
       res.json({error: 'database not connected, try again later'});
@@ -369,6 +376,7 @@ module.exports = function(app, pool, readOnlyUser) {
         res.json({result: "ok", table: `${schemaName}.${tableName}`, io: io});
         autoCleanUp(schemaName, tableName, 'geom');
         rmr(`${__dirname}/cache/${pool.$cn.database}/${schemaName}.${tableName}`).catch(err=>{});
+        setCommentOnTable(pool, schemaName, tableName, filename, layername);
       })
       .catch((err)=> {
         res.json({error: err});
