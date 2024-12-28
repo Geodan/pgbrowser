@@ -1,4 +1,4 @@
 {
-    "userport": 8090,
-    "adminport": 8090
+  "userport": 8090,
+  "adminport": 9000
 }

@@ -11,18 +11,18 @@
   "author": "Anne Blankert, Geodan",
   "license": "ISC",
   "dependencies": {
-    "7zip-bin": "^5.0.3",
     "@mapbox/sphericalmercator": "^1.1.0",
+    "7zip-bin": "^5.2.0",
     "cors": "^2.8.5",
-    "express": "^4.17.3",
-    "express-fileupload": "^1.2.1",
-    "morgan": "^1.9.1",
-    "node-7z": "^2.0.4",
-    "pg-promise": "^10.10.2",
-    "swagger-jsdoc": "^3.4.0",
-    "swagger-ui-express": "^4.3.0"
+    "express": "^4.21.2",
+    "express-fileupload": "^1.5.1",
+    "morgan": "^1.10.0",
+    "node-7z": "^3.0.0",
+    "pg-promise": "^11.10.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^2.0.12"
+    "nodemon": "^3.1.9"
   }
 }
