@@ -35,7 +35,7 @@ const sqlPercentilesVarchar = (params, query) => {
   return `
   select min(buckets.value) "from", max(buckets.value) "to", count(ntile)::integer "count", ntile as percentile
     from
-      (select "${params.column}" as value, ntile(100) over (order by "${params.column}" collate "C.UTF-8") 
+      (select "${params.column}" as value, ntile(100) over (order by "${params.column}" collate "C") 
         from ${sqlTableName(params.table)} 
           where "${params.column}" is not null and ${query.geom_column} is not null) 
       as buckets
