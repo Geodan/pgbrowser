@@ -11,13 +11,13 @@
   "license": "ISC",
   "dependencies": {
     "@ipregistry/chart.js": "^2.8.0-esm.1",
-    "chart.js": "^2.9.4",
-    "lit-element": "^2.2.1",
-    "mapbox-gl": "^1.13.2"
+    "chart.js": "^4.4.7",
+    "lit-element": "^4.1.1",
+    "mapbox-gl": "^1.13.3"
   },
   "devDependencies": {
-    "chai": "^4.2.0",
-    "mocha": "^9.2.2",
-    "sinon": "^7.5.0"
+    "chai": "^5.1.2",
+    "mocha": "^11.0.1",
+    "sinon": "^19.0.2"
   }
 }

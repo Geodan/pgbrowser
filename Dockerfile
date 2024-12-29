@@ -1,4 +1,4 @@
-from osgeo/gdal:ubuntu-small-3.3.0
+FROM ghcr.io/osgeo/gdal:alpine-small-3.10.0
 RUN mkdir -p /usr/src/app
-RUN apt-get update && apt-get install -y nodejs npm
+RUN apk update && apk add --no-cache nodejs npm
 WORKDIR /usr/src/app
