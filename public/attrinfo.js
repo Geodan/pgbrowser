@@ -1,8 +1,8 @@
-import {getColorSchemes} from '../colorbrewer.js';
-import {classify} from '../classify.js';
-import '../map-legend.js';
-import '../map-graph.js';
-import '../map-legend-config.js';
+import {getColorSchemes} from './colorbrewer.js';
+import {classify} from './classify.js';
+import './map-legend.js';
+import './map-graph.js';
+import './map-legend-config.js';
 
 function textStats(stats) {
     document.querySelector('#textstats').innerHTML = `

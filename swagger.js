@@ -1,9 +1,28 @@
 const swaggerUi = require('swagger-ui-express');
 const swaggerJSDoc = require('swagger-jsdoc');
 
+/*
+const YAML = require('yamljs');
+const { join } = require('path');
+
+module.exports = function(app) {
+  app.get('/api-docs/spec', (req, res) => res.json(apiSpec));
+
+  const apiSpec = YAML.load(join(__dirname, 'openapi.yaml'));
+
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(apiSpec,
+    {
+      customSiteTitle: 'Transport Planner API',
+      url: './spec',
+      baseUrl: './'
+    }),
+  );
+};
+*/
 const swaggerDefinition = {
     info: {
         // API informations (required)
+        openapi: '3.0.3',
         title: 'PGServer', // Title (required)
         version: '0.0.1', // Version (required)
         description: 'PostGIS http api', // Description (optional)
@@ -18,13 +37,21 @@ const swaggerDefinition = {
           description: 'features in common formats for direct mapping'
         }
       ],
-      basePath: '/', // Base path (optional)
+      servers: [
+        {
+          url: '../',
+          description: 'This Realm'
+        },
+        {
+          url: 'https://tiles.edugis.nl/pgserver',
+          description: 'Production server'
+        }
+      ],
 }
 
 const swaggerJSDocOptions = {
     swaggerDefinition,
     apis: [
-      './login.js', 
       './mvt.js', 
       './list_layers.js', 
       './layer_columns.js', 
@@ -40,5 +67,9 @@ const swaggerJSDocOptions = {
 const swaggerSpec = swaggerJSDoc(swaggerJSDocOptions);
 
 module.exports = function(app) {
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, 
+      {
+        customSiteTitle: 'PGServer API Documentation'
+      }
+    ));
 }

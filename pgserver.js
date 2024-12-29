@@ -49,7 +49,6 @@ const cache = new DirCache(`./cache/${dbconfig.database?dbconfig.database:proces
 
 
 const swagger = require('./swagger.js')(app);
-const login = require('./login.js')(app);
 const upload = require('./upload.js')(adminApp, adminPool, dbconfig.readonlyuser);
 const clearCache = require('./clearcache.js')(adminApp, cache);
 

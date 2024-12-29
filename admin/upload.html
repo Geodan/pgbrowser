@@ -177,7 +177,7 @@
 
     function subdirNavigation(subdir) {
         if (!subdir) {
-            return 'Home';
+            return 'Uploads';
         }
         dirpath = "";
         return subdir.split('/').reduce((result, item, index, array)=>{
@@ -213,7 +213,8 @@
 <form id="uploadform" action="upload" method="post" encType="multipart/form-data">
 <input id="file" name="uploadfile" type="file" required><br>
 <input type="button" value="upload" onclick="uploadFile()"><br>
-<progress value="0" max="100"></progress>
+<progress value="0" max="100"></progress><br>
+<a href="../index.html">Back to database overview</a>
 <div id="status"></div>
 <div id="percentage"></div>
 </form>
